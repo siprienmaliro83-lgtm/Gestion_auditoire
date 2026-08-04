@@ -54,6 +54,8 @@ class DecanatCrudController extends Controller
             'config' => $config,
             'item' => new $config['model'](),
             'options' => $this->options($config),
+            'ecs' => $resource === 'enseignants' ? Ec::with('ue')->orderBy('code')->get() : null,
+            'enseignant' => null,
         ]);
     }
 
@@ -62,7 +64,16 @@ class DecanatCrudController extends Controller
         $config = self::config($resource);
         $data = $this->payload($request->validated(), $config);
 
-        $config['model']::create($data);
+        if ($resource === 'enseignants') {
+            $ecIds = $request->input('ec_ids', []);
+            unset($data['ec_ids']);
+            $enseignant = $config['model']::create($data);
+            if (!empty($ecIds)) {
+                $enseignant->ecs()->attach($ecIds);
+            }
+        } else {
+            $config['model']::create($data);
+        }
 
         return redirect()
             ->route('decanat.crud.index', $resource)
@@ -74,11 +85,20 @@ class DecanatCrudController extends Controller
         $config = self::config($resource);
         $item = $config['model']::findOrFail($id);
 
+        $ecs = null;
+        $enseignant = null;
+        if ($resource === 'enseignants') {
+            $ecs = Ec::with('ue')->orderBy('code')->get();
+            $enseignant = $item;
+        }
+
         return view('decanat.crud.form', [
             'resource' => $resource,
             'config' => $config,
             'item' => $item,
             'options' => $this->options($config),
+            'ecs' => $ecs,
+            'enseignant' => $enseignant,
         ]);
     }
 
@@ -88,7 +108,14 @@ class DecanatCrudController extends Controller
         $item = $config['model']::findOrFail($id);
         $data = $this->payload($request->validated(), $config, $item);
 
-        $item->update($data);
+        if ($resource === 'enseignants') {
+            $ecIds = $request->input('ec_ids', []);
+            unset($data['ec_ids']);
+            $item->update($data);
+            $item->ecs()->sync($ecIds);
+        } else {
+            $item->update($data);
+        }
 
         return redirect()
             ->route('decanat.crud.index', $resource)
@@ -156,6 +183,8 @@ class DecanatCrudController extends Controller
                 'email' => ['required', 'email', 'max:255', Rule::unique('enseignants', 'email')->ignore($id)],
                 'telephone' => ['nullable', 'string', 'max:255'],
                 'grade' => ['nullable', 'string', 'max:255'],
+                'ec_ids' => ['nullable', 'array'],
+                'ec_ids.*' => ['exists:ecs,id'],
             ],
             default => abort(404),
         };
@@ -239,9 +268,17 @@ class DecanatCrudController extends Controller
                 'title' => 'Enseignants',
                 'singular' => 'Enseignant',
                 'search' => ['matricule', 'nom', 'prenom', 'email'],
-                'with' => ['user'],
+                'with' => ['user', 'ecs'],
                 'fields' => ['user_id' => 'select:users', 'matricule' => 'text', 'nom' => 'text', 'prenom' => 'text', 'email' => 'email', 'telephone' => 'text', 'grade' => 'text'],
                 'columns' => ['matricule', 'nom', 'prenom', 'email', 'grade'],
+            ],
+            'users' => [
+                'model' => \App\Models\User::class,
+                'title' => 'Utilisateurs',
+                'singular' => 'Utilisateur',
+                'search' => ['name', 'email'],
+                'fields' => [],
+                'columns' => [],
             ],
         ];
 
@@ -295,6 +332,7 @@ class DecanatCrudController extends Controller
     {
         return match ($resource) {
             'annees-academiques' => 'libelle',
+            'users' => 'name',
             default => 'nom',
         };
     }
@@ -303,6 +341,7 @@ class DecanatCrudController extends Controller
     {
         return match ($resource) {
             'annees-academiques' => $model->libelle,
+            'users' => $model->name.' - '.$model->email,
             default => trim(($model->code ?? '').' '.$model->nom),
         };
     }

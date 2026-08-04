@@ -8,10 +8,8 @@ use App\Models\Auditoire;
 use App\Models\DemandeAuditoire;
 use App\Models\Notification;
 use App\Models\Programmation;
-use App\Models\Promotion;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -19,64 +17,16 @@ class AttributionAuditoireController extends Controller
 {
     public function index(): View
     {
-        $demandes = DemandeAuditoire::with(['ec.ue', 'enseignant', 'user'])
-            ->whereIn('statut', ['En attente', 'Acceptée', 'Attribuée'])
+        $demandes = DemandeAuditoire::with(['ec', 'enseignant', 'user'])
+            ->where('statut', 'Acceptée')
+            ->orWhere('statut', 'En attente')
             ->latest()
-            ->get();
-
-        $auditoires = Auditoire::with('batiment')
-            ->where('etat', 'Disponible')
             ->get();
 
         return view('admin.attributions.index', [
             'demandes' => $demandes,
-            'auditoires' => $auditoires,
+            'auditoires' => Auditoire::with('batiment')->get(),
         ]);
-    }
-
-    public function accepter(DemandeAuditoire $demande): RedirectResponse
-    {
-        $demande->update(['statut' => 'Acceptée']);
-
-        Notification::create([
-            'id' => (string) Str::uuid(),
-            'type' => 'App\\Notifications\\DemandeStatusChanged',
-            'notifiable_type' => User::class,
-            'notifiable_id' => $demande->user_id,
-            'data' => [
-                'message' => sprintf('Votre demande pour "%s" a été acceptée. Vous pouvez maintenant attribuer un auditoire.', $demande->ec?->nom ?? 'EC'),
-                'demande_id' => $demande->id,
-                'statut' => 'Acceptée',
-            ],
-        ]);
-
-        return back()->with('success', 'Demande acceptée.');
-    }
-
-    public function refuser(Request $request, DemandeAuditoire $demande): RedirectResponse
-    {
-        $request->validate([
-            'motif_refus' => ['required', 'string', 'max:500'],
-        ]);
-
-        $demande->update([
-            'statut' => 'Refusée',
-            'motif_refus' => $request->input('motif_refus'),
-        ]);
-
-        Notification::create([
-            'id' => (string) Str::uuid(),
-            'type' => 'App\\Notifications\\DemandeStatusChanged',
-            'notifiable_type' => User::class,
-            'notifiable_id' => $demande->user_id,
-            'data' => [
-                'message' => sprintf('Votre demande pour "%s" a été refusée. Motif: %s', $demande->ec?->nom ?? 'EC', $demande->motif_refus),
-                'demande_id' => $demande->id,
-                'statut' => 'Refusée',
-            ],
-        ]);
-
-        return back()->with('success', 'Demande refusée.');
     }
 
     public function store(AttributionAuditoireRequest $request): RedirectResponse
@@ -111,10 +61,10 @@ class AttributionAuditoireController extends Controller
             ->exists();
 
         if ($enseignantConflict) {
-            return back()->withErrors(['enseignant_id' => 'Conflit enseignant : ce professeur est déjà programmé dans un autre auditoire à cette heure.']);
+            return back()->withErrors(['enseignant_id' => 'Conflit enseignant : ce professeur est déjà programmé à cette heure.']);
         }
 
-        Programmation::create([
+        $programming = Programmation::create([
             'demande_auditoire_id' => $demande->id,
             'ec_id' => $demande->ec_id,
             'enseignant_id' => $demande->enseignant_id,
@@ -130,57 +80,62 @@ class AttributionAuditoireController extends Controller
             'validee_a' => now(),
         ]);
 
-        $demande->update(['statut' => 'Attribuée']);
+        $demande->update([
+            'statut' => 'Attribuée',
+        ]);
 
-        $ecNom = $demande->ec?->nom ?? 'EC';
-        $audNom = $auditoire->nom;
+        $message = sprintf(
+            'Un auditoire a été attribué pour %s le %s de %s à %s dans %s.',
+            $demande->ec?->nom ?? 'Cet EC',
+            $demande->date_debut->format('d/m/Y'),
+            substr($demande->heure_debut, 0, 5),
+            substr($demande->heure_fin, 0, 5),
+            $auditoire->nom,
+        );
 
         Notification::create([
             'id' => (string) Str::uuid(),
-            'type' => 'App\\Notifications\\DemandeStatusChanged',
+            'type' => 'App\\Notifications\\ProgrammationAttribuee',
             'notifiable_type' => User::class,
-            'notifiable_id' => $demande->user_id,
+            'notifiable_id' => $demande->enseignant?->user_id ?? $demande->enseignant_id,
             'data' => [
-                'message' => sprintf('Un auditoire a été attribué pour "%s". Auditoire: %s.', $ecNom, $audNom),
-                'demande_id' => $demande->id,
-                'statut' => 'Attribuée',
+                'message' => $message,
+                'programmation_id' => $programming->id,
+                'ec_id' => $demande->ec_id,
+                'auditoire_id' => $auditoire->id,
+                'date_debut' => $demande->date_debut->format('Y-m-d'),
+                'heure_debut' => $demande->heure_debut,
+                'heure_fin' => $demande->heure_fin,
             ],
         ]);
 
-        $enseignant = $demande->enseignant;
-        if ($enseignant && $enseignant->user_id) {
+        $promotionIds = $demande->promotions_concernees ?? [];
+        $students = User::where('role_id', function ($query) {
+            $query->select('id')->from('roles')->where('nom', 'Étudiant')->limit(1);
+        })->whereIn('promotion_id', $promotionIds)->get();
+
+        foreach ($students as $student) {
             Notification::create([
                 'id' => (string) Str::uuid(),
-                'type' => 'App\\Notifications\\ProgrammationCreated',
+                'type' => 'App\\Notifications\\ProgrammationAttribuee',
                 'notifiable_type' => User::class,
-                'notifiable_id' => $enseignant->user_id,
+                'notifiable_id' => $student->id,
                 'data' => [
-                    'message' => sprintf('Vous avez été programmé pour "%s" en %s le %s de %s à %s.', $ecNom, $audNom, $demande->date_debut->format('d/m/Y'), substr($demande->heure_debut, 0, 5), substr($demande->heure_fin, 0, 5)),
-                    'demande_id' => $demande->id,
-                    'statut' => 'Attribuée',
+                    'message' => sprintf('Votre promotion a reçu un horaire pour %s le %s de %s à %s dans %s.',
+                        $demande->ec?->nom ?? 'cet EC',
+                        $demande->date_debut->format('d/m/Y'),
+                        substr($demande->heure_debut, 0, 5),
+                        substr($demande->heure_fin, 0, 5),
+                        $auditoire->nom,
+                    ),
+                    'programmation_id' => $programming->id,
+                    'ec_id' => $demande->ec_id,
+                    'auditoire_id' => $auditoire->id,
+                    'date_debut' => $demande->date_debut->format('Y-m-d'),
+                    'heure_debut' => $demande->heure_debut,
+                    'heure_fin' => $demande->heure_fin,
                 ],
             ]);
-        }
-
-        $promotionIds = $demande->promotions_concernees ?? [];
-        if (!empty($promotionIds)) {
-            $etudiants = User::where('role_id', \App\Models\Role::where('nom', 'Étudiant')->value('id'))
-                ->whereIn('promotion_id', $promotionIds)
-                ->get();
-
-            foreach ($etudiants as $etudiant) {
-                Notification::create([
-                    'id' => (string) Str::uuid(),
-                    'type' => 'App\\Notifications\\ProgrammationCreated',
-                    'notifiable_type' => User::class,
-                    'notifiable_id' => $etudiant->id,
-                    'data' => [
-                        'message' => sprintf('Nouveau cours programmé : "%s" en %s le %s de %s à %s.', $ecNom, $audNom, $demande->date_debut->format('d/m/Y'), substr($demande->heure_debut, 0, 5), substr($demande->heure_fin, 0, 5)),
-                        'demande_id' => $demande->id,
-                        'statut' => 'Attribuée',
-                    ],
-                ]);
-            }
         }
 
         return redirect()->route('admin.attributions.index')->with('success', 'Auditoire attribué avec succès.');

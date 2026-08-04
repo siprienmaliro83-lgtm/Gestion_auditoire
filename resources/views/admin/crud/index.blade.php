@@ -11,22 +11,18 @@
                 <i class="bi bi-search"></i>
             </button>
         </form>
-        <a class="btn btn-primary" href="{{ route('admin.crud.create', $resource) }}">
-            <i class="bi bi-plus-circle me-1"></i>Ajouter
-        </a>
-    </div>
-
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-
-    @if($errors->any())
-        <div class="alert alert-danger">
-            @foreach($errors->all() as $error)
-                <div>{{ $error }}</div>
-            @endforeach
-        </div>
-    @endif
+            @unless($resource === 'demandes')
+                <a class="btn btn-primary" href="{{ route('admin.crud.create', $resource) }}">
+                    <i class="bi bi-plus-circle me-1"></i>Ajouter
+                </a>
+            @endunless
+        @if($errors->any())
+            <div class="alert alert-danger">
+                @foreach($errors->all() as $error)
+                    <div>{{ $error }}</div>
+                @endforeach
+            </div>
+        @endif
 
     <div class="card stat-card">
         <div class="table-responsive">

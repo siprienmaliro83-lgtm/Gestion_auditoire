@@ -65,6 +65,25 @@
                     @endforeach
                 </div>
 
+                @if($resource === 'enseignants' && isset($ecs))
+                    <div class="row g-3 mt-2">
+                        <div class="col-12">
+                            <label class="form-label">EC assignés</label>
+                            <select class="form-select @error('ec_ids') is-invalid @enderror" id="ec_ids" name="ec_ids[]" multiple size="8">
+                                @foreach($ecs as $ec)
+                                    @php
+                                        $ecSelected = $enseignant && $enseignant->ecs->contains($ec->id);
+                                    @endphp
+                                    <option value="{{ $ec->id }}" @selected($ecSelected)>
+                                        {{ $ec->code }} - {{ $ec->nom }} ({{ $ec->ue?->nom ?? 'Sans UE' }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('ec_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                    </div>
+                @endif
+
                 <div class="d-flex justify-content-end gap-2 mt-4">
                     <a class="btn btn-outline-secondary" href="{{ route('decanat.crud.index', $resource) }}">Annuler</a>
                     <button class="btn btn-primary" type="submit">

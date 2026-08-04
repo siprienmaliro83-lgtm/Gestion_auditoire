@@ -4,160 +4,56 @@
 @section('page-title', 'Attribution des auditoires')
 
 @section('content')
-@if(session('success'))
-    <div class="alert alert-success">{{ session('success') }}</div>
-@endif
-@if($errors->any())
-    <div class="alert alert-danger">
-        @foreach($errors->all() as $error)
-            <div>{{ $error }}</div>
-        @endforeach
-    </div>
-@endif
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
 
-<div class="row g-4">
-    <div class="col-lg-7">
-        <div class="card stat-card">
-            <div class="card-header bg-white fw-semibold">Demandes en attente</div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>EC</th>
-                            <th>Enseignant</th>
-                            <th>Décanat</th>
-                            <th>Date</th>
-                            <th>Horaire</th>
-                            <th>Effectif</th>
-                            <th>Statut</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($demandes as $demande)
-                            <tr>
-                                <td>
-                                    <div class="fw-semibold">{{ $demande->ec->nom }}</div>
-                                    <small class="text-muted">{{ $demande->ec->ue->code ?? '' }}</small>
-                                </td>
-                                <td>{{ $demande->enseignant->prenom }} {{ $demande->enseignant->nom }}</td>
-                                <td>{{ $demande->user->name }}</td>
-                                <td>{{ \Carbon\Carbon::parse($demande->date_debut)->format('d/m/Y') }}</td>
-                                <td>{{ substr($demande->heure_debut, 0, 5) }} - {{ substr($demande->heure_fin, 0, 5) }}</td>
-                                <td>{{ $demande->effectif_total }}</td>
-                                <td>
-                                    @if($demande->statut === 'En attente')
-                                        <span class="badge bg-warning text-dark">{{ $demande->statut }}</span>
-                                    @elseif($demande->statut === 'Acceptée')
-                                        <span class="badge bg-info">{{ $demande->statut }}</span>
-                                    @elseif($demande->statut === 'Attribuée')
-                                        <span class="badge bg-success">{{ $demande->statut }}</span>
-                                    @else
-                                        <span class="badge bg-danger">{{ $demande->statut }}</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        @if($demande->statut === 'En attente')
-                                            <form method="POST" action="{{ route('admin.attributions.accepter', $demande) }}" class="d-inline">
-                                                @csrf @method('PATCH')
-                                                <button class="btn btn-outline-success btn-sm" title="Accepter"><i class="bi bi-check-lg"></i></button>
-                                            </form>
-                                            <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#refusModal{{ $demande->id }}" title="Refuser">
-                                                <i class="bi bi-x-lg"></i>
-                                            </button>
-                                            <!-- Modal Refus -->
-                                            <div class="modal fade" id="refusModal{{ $demande->id }}" tabindex="-1">
-                                                <div class="modal-dialog">
-                                                    <form method="POST" action="{{ route('admin.attributions.refuser', $demande) }}">
-                                                        @csrf @method('PATCH')
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">Refuser la demande</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <label class="form-label">Motif du refus</label>
-                                                                <textarea class="form-control" name="motif_refus" required rows="3" placeholder="Entrez le motif du refus..."></textarea>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                                                <button type="submit" class="btn btn-danger">Refuser</button>
-                                                            </div>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        @endif
-                                        @if($demande->statut === 'Acceptée')
-                                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#attrModal{{ $demande->id }}">
-                                                <i class="bi bi-door-open"></i> Attribuer
-                                            </button>
-                                            <!-- Modal Attribution -->
-                                            <div class="modal fade" id="attrModal{{ $demande->id }}" tabindex="-1">
-                                                <div class="modal-dialog">
-                                                    <form method="POST" action="{{ route('admin.attributions.store') }}">
-                                                        @csrf
-                                                        <input type="hidden" name="demande_auditoire_id" value="{{ $demande->id }}">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">Attribuer un auditoire</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <div class="mb-3">
-                                                                    <strong>{{ $demande->ec->nom }}</strong> — {{ $demande->enseignant->prenom }} {{ $demande->enseignant->nom }}<br>
-                                                                    Effectif: {{ $demande->effectif_total }}
-                                                                </div>
-                                                                <label class="form-label">Auditoire</label>
-                                                                <select class="form-select" name="auditoire_id" required>
-                                                                    <option value="">Sélectionner un auditoire</option>
-                                                                    @foreach($auditoires as $aud)
-                                                                        <option value="{{ $aud->id }}" @if($aud->capacite < $demande->effectif_total) disabled @endif>
-                                                                            {{ $aud->nom }} ({{ $aud->batiment->nom }}) — Capacité: {{ $aud->capacite }} {{ $aud->capacite < $demande->effectif_total ? '⚠ insuffisant' : '' }}
-                                                                        </option>
-                                                                    @endforeach
-                                                                </select>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                                                <button type="submit" class="btn btn-primary">Attribuer</button>
-                                                            </div>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td class="text-center text-muted py-4" colspan="8">Aucune demande en attente.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+    @if($errors->any())
+        <div class="alert alert-danger">
+            @foreach($errors->all() as $error)
+                <div>{{ $error }}</div>
+            @endforeach
         </div>
-    </div>
-    <div class="col-lg-5">
-        <div class="card stat-card">
-            <div class="card-header bg-white fw-semibold">Auditoires disponibles</div>
-            <div class="list-group list-group-flush">
-                @forelse($auditoires as $aud)
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-semibold">{{ $aud->nom }}</div>
-                            <small class="text-muted">{{ $aud->batiment->nom }}</small>
+    @endif
+
+    <div class="row g-4">
+        @forelse($demandes as $demande)
+            <div class="col-lg-6">
+                <div class="card stat-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <div class="fw-semibold">{{ $demande->ec?->nom }}</div>
+                                <div class="small text-muted">{{ $demande->enseignant?->nom }} · {{ $demande->date_debut->format('d/m/Y') }} · {{ $demande->heure_debut }} - {{ $demande->heure_fin }}</div>
+                            </div>
+                            <span class="badge text-bg-primary">{{ $demande->statut }}</span>
                         </div>
-                        <span class="badge bg-primary">{{ $aud->capacite }}</span>
+
+                        <form method="POST" action="{{ route('admin.attributions.store') }}">
+                            @csrf
+                            <input type="hidden" name="demande_auditoire_id" value="{{ $demande->id }}">
+
+                            <div class="mb-3">
+                                <label class="form-label" for="auditoire_{{ $demande->id }}">Auditoire</label>
+                                <select class="form-select" id="auditoire_{{ $demande->id }}" name="auditoire_id" required>
+                                    <option value="">Sélectionner</option>
+                                    @foreach($auditoires as $auditoire)
+                                        <option value="{{ $auditoire->id }}">{{ $auditoire->nom }} · {{ $auditoire->batiment?->nom }} · Capacité {{ $auditoire->capacite }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <input type="hidden" name="statut" value="Validée">
+
+                            <button type="submit" class="btn btn-primary w-100">Attribuer</button>
+                        </form>
                     </div>
-                @empty
-                    <div class="list-group-item text-muted">Aucun auditoire disponible.</div>
-                @endforelse
+                </div>
             </div>
-        </div>
+        @empty
+            <div class="col-12">
+                <div class="alert alert-info mb-0">Aucune demande à traiter.</div>
+            </div>
+        @endforelse
     </div>
-</div>
 @endsection
