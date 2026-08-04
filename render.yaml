@@ -1,18 +1,20 @@
 # Blueprint Render pour l'application "Gestion des auditoires"
+# ATTENTION : PHP n'a PAS de runtime natif sur Render.
+# Le déploiement utilise obligatoirement Docker (runtime: docker).
+# Le Dockerfile à la racine construit l'image (Apache + PHP 8.2).
+#
 # Utilisation :
-#   1. Pousser ce fichier sur GitHub
+#   1. Pousser ce fichier + le Dockerfile sur GitHub
 #   2. Sur Render : "New +" > "Blueprint" > sélectionner le dépôt
-#   OU créer manuellement un "Web Service" avec les valeurs ci-dessous.
+#   OU créer manuellement un "Web Service" : Runtime = Docker
 
 services:
   - type: web
     name: gestion-auditoire
-    runtime: php
+    runtime: docker
     plan: free
     rootDir: .
     healthCheckPath: /login
-    buildCommand: composer install --no-dev --optimize-autoloader --prefer-dist
-    startCommand: bash render/start.sh
     envVars:
       - key: APP_NAME
         value: Gestion des auditoires
