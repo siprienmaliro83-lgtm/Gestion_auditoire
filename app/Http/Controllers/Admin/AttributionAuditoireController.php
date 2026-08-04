@@ -18,8 +18,7 @@ class AttributionAuditoireController extends Controller
     public function index(): View
     {
         $demandes = DemandeAuditoire::with(['ec', 'enseignant', 'user'])
-            ->where('statut', 'Acceptée')
-            ->orWhere('statut', 'En attente')
+            ->whereIn('statut', ['En attente', 'Acceptée', 'Attribuée'])
             ->latest()
             ->get();
 

@@ -26,7 +26,7 @@
                                 <div class="fw-semibold">{{ $demande->ec?->nom }}</div>
                                 <div class="small text-muted">{{ $demande->enseignant?->nom }} · {{ $demande->date_debut->format('d/m/Y') }} · {{ $demande->heure_debut }} - {{ $demande->heure_fin }}</div>
                             </div>
-                            <span class="badge text-bg-primary">{{ $demande->statut }}</span>
+                            <span class="badge text-bg-{{ $demande->statut === 'Attribuée' ? 'success' : ($demande->statut === 'Acceptée' ? 'info' : 'warning') }}">{{ $demande->statut }}</span>
                         </div>
 
                         <form method="POST" action="{{ route('admin.attributions.store') }}">
@@ -45,7 +45,11 @@
 
                             <input type="hidden" name="statut" value="Validée">
 
-                            <button type="submit" class="btn btn-primary w-100">Attribuer</button>
+                            @if($demande->statut !== 'Attribuée')
+                                <button type="submit" class="btn btn-primary w-100">Attribuer</button>
+                            @else
+                                <button type="button" class="btn btn-outline-success w-100" disabled>Déjà attribuée</button>
+                            @endif
                         </form>
                     </div>
                 </div>
