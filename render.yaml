@@ -1,0 +1,42 @@
+# Blueprint Render pour l'application "Gestion des auditoires"
+# Utilisation :
+#   1. Pousser ce fichier sur GitHub
+#   2. Sur Render : "New +" > "Blueprint" > sélectionner le dépôt
+#   OU créer manuellement un "Web Service" avec les valeurs ci-dessous.
+
+services:
+  - type: web
+    name: gestion-auditoire
+    runtime: php
+    plan: free
+    rootDir: .
+    healthCheckPath: /login
+    buildCommand: composer install --no-dev --optimize-autoloader --prefer-dist
+    startCommand: bash render/start.sh
+    envVars:
+      - key: APP_NAME
+        value: Gestion des auditoires
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        sync: false # à remplacer par https://<votre-service>.onrender.com
+      - key: APP_KEY
+        sync: false # à générer puis coller ici (base64:...)
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: DB_DATABASE
+        value: /var/data/database.sqlite
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: LOG_LEVEL
+        value: error
+    disk:
+      name: sqlite-data
+      mountPath: /var/data
+      sizeGB: 1

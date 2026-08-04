@@ -60,6 +60,13 @@
                 <div class="container-fluid px-0">
                     <span class="navbar-brand mb-0 h6">@yield('page-title', 'Dashboard')</span>
                     <div class="d-flex align-items-center gap-3">
+                        <a class="btn btn-outline-primary btn-sm position-relative" href="{{ route('notifications.index') }}">
+                            <i class="bi bi-bell"></i>
+                            @php($unreadCount = auth()->user()->unreadNotifications()->count())
+                            @if($unreadCount > 0)
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ $unreadCount }}</span>
+                            @endif
+                        </a>
                         <span class="text-muted small">{{ auth()->user()->name }} · {{ auth()->user()->role?->nom }}</span>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf

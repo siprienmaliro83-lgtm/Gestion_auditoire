@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AttributionAuditoireRequest;
 use App\Models\Auditoire;
 use App\Models\DemandeAuditoire;
-use App\Models\Notification;
 use App\Models\Programmation;
-use App\Models\User;
+use App\Services\ProgrammationNotificationService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AttributionAuditoireController extends Controller
@@ -28,7 +26,7 @@ class AttributionAuditoireController extends Controller
         ]);
     }
 
-    public function store(AttributionAuditoireRequest $request): RedirectResponse
+    public function store(AttributionAuditoireRequest $request, ProgrammationNotificationService $notificationService): RedirectResponse
     {
         $demande = DemandeAuditoire::findOrFail($request->input('demande_auditoire_id'));
         $auditoire = Auditoire::findOrFail($request->input('auditoire_id'));
@@ -83,59 +81,7 @@ class AttributionAuditoireController extends Controller
             'statut' => 'Attribuée',
         ]);
 
-        $message = sprintf(
-            'Un auditoire a été attribué pour %s le %s de %s à %s dans %s.',
-            $demande->ec?->nom ?? 'Cet EC',
-            $demande->date_debut->format('d/m/Y'),
-            substr($demande->heure_debut, 0, 5),
-            substr($demande->heure_fin, 0, 5),
-            $auditoire->nom,
-        );
-
-        Notification::create([
-            'id' => (string) Str::uuid(),
-            'type' => 'App\\Notifications\\ProgrammationAttribuee',
-            'notifiable_type' => User::class,
-            'notifiable_id' => $demande->enseignant?->user_id ?? $demande->enseignant_id,
-            'data' => [
-                'message' => $message,
-                'programmation_id' => $programming->id,
-                'ec_id' => $demande->ec_id,
-                'auditoire_id' => $auditoire->id,
-                'date_debut' => $demande->date_debut->format('Y-m-d'),
-                'heure_debut' => $demande->heure_debut,
-                'heure_fin' => $demande->heure_fin,
-            ],
-        ]);
-
-        $promotionIds = $demande->promotions_concernees ?? [];
-        $students = User::where('role_id', function ($query) {
-            $query->select('id')->from('roles')->where('nom', 'Étudiant')->limit(1);
-        })->whereIn('promotion_id', $promotionIds)->get();
-
-        foreach ($students as $student) {
-            Notification::create([
-                'id' => (string) Str::uuid(),
-                'type' => 'App\\Notifications\\ProgrammationAttribuee',
-                'notifiable_type' => User::class,
-                'notifiable_id' => $student->id,
-                'data' => [
-                    'message' => sprintf('Votre promotion a reçu un horaire pour %s le %s de %s à %s dans %s.',
-                        $demande->ec?->nom ?? 'cet EC',
-                        $demande->date_debut->format('d/m/Y'),
-                        substr($demande->heure_debut, 0, 5),
-                        substr($demande->heure_fin, 0, 5),
-                        $auditoire->nom,
-                    ),
-                    'programmation_id' => $programming->id,
-                    'ec_id' => $demande->ec_id,
-                    'auditoire_id' => $auditoire->id,
-                    'date_debut' => $demande->date_debut->format('Y-m-d'),
-                    'heure_debut' => $demande->heure_debut,
-                    'heure_fin' => $demande->heure_fin,
-                ],
-            ]);
-        }
+        $notificationService->notifyForDemande($demande, $programming->id, $auditoire->nom);
 
         return redirect()->route('admin.attributions.index')->with('success', 'Auditoire attribué avec succès.');
     }
