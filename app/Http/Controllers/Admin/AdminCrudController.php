@@ -4,20 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminCrudRequest;
-use App\Models\AnneeAcademique;
 use App\Models\Auditoire;
 use App\Models\Batiment;
-use App\Models\Domaine;
-use App\Models\DemandeAuditoire;
-use App\Models\Ec;
-use App\Models\Enseignant;
-use App\Models\Filiere;
-use App\Models\Mention;
-use App\Models\ProgrammeAcademique;
-use App\Models\Programmation;
-use App\Models\Promotion;
 use App\Models\Role;
-use App\Models\Ue;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -36,6 +25,7 @@ class AdminCrudController extends Controller
         return redirect()->route('admin.crud.index', 'users')
             ->with('success', "Le compte de {$user->name} a été {$action}.");
     }
+
     public function index(string $resource): View
     {
         $config = self::config($resource);
@@ -144,83 +134,12 @@ class AdminCrudController extends Controller
                 'domaine_id' => ['nullable', 'exists:domaines,id'],
                 'promotion_id' => ['nullable', 'exists:promotions,id'],
             ],
-            'domaines' => self::basicRules('domaines', $id),
-            'filieres' => self::basicRules('filieres', $id) + ['domaine_id' => ['required', 'exists:domaines,id']],
-            'mentions' => self::basicRules('mentions', $id) + ['filiere_id' => ['required', 'exists:filieres,id']],
-            'promotions' => [
-                'mention_id' => ['required', 'exists:mentions,id'],
-                'code' => ['required', 'string', 'max:255', Rule::unique('promotions', 'code')->ignore($id)],
-                'nom' => ['required', 'string', 'max:255'],
-                'niveau' => ['required', 'integer', 'min:1', 'max:5'],
-                'effectif' => ['required', 'integer', 'min:0'],
-            ],
-            'annees-academiques' => [
-                'libelle' => ['required', 'string', 'max:255', Rule::unique('annees_academiques', 'libelle')->ignore($id)],
-                'date_debut' => ['required', 'date'],
-                'date_fin' => ['required', 'date', 'after:date_debut'],
-                'active' => ['nullable', 'boolean'],
-            ],
-            'programmes-academiques' => [
-                'annee_academique_id' => ['required', 'exists:annees_academiques,id'],
-                'code' => ['required', 'string', 'max:255', Rule::unique('programmes_academiques', 'code')->ignore($id)],
-                'nom' => ['required', 'string', 'max:255'],
-                'description' => ['nullable', 'string'],
-            ],
-            'ues' => [
-                'programme_academique_id' => ['required', 'exists:programmes_academiques,id'],
-                'code' => ['required', 'string', 'max:255', Rule::unique('ues', 'code')->ignore($id)],
-                'nom' => ['required', 'string', 'max:255'],
-                'credits' => ['required', 'integer', 'min:0'],
-                'volume_horaire' => ['required', 'integer', 'min:0'],
-            ],
-            'ecs' => [
-                'ue_id' => ['required', 'exists:ues,id'],
-                'code' => ['required', 'string', 'max:255', Rule::unique('ecs', 'code')->ignore($id)],
-                'nom' => ['required', 'string', 'max:255'],
-                'volume_horaire' => ['required', 'integer', 'min:1'],
-                'statut' => ['required', Rule::in(['Non commencé', 'En cours', 'Entièrement dispensé'])],
-            ],
-            'enseignants' => [
-                'user_id' => ['nullable', 'exists:users,id'],
-                'matricule' => ['required', 'string', 'max:255', Rule::unique('enseignants', 'matricule')->ignore($id)],
-                'nom' => ['required', 'string', 'max:255'],
-                'prenom' => ['nullable', 'string', 'max:255'],
-                'email' => ['required', 'email', 'max:255', Rule::unique('enseignants', 'email')->ignore($id)],
-                'telephone' => ['nullable', 'string', 'max:255'],
-                'grade' => ['nullable', 'string', 'max:255'],
-            ],
             'batiments' => self::basicRules('batiments', $id, true),
             'auditoires' => [
                 'batiment_id' => ['required', 'exists:batiments,id'],
                 'nom' => ['required', 'string', 'max:255'],
                 'capacite' => ['required', 'integer', 'min:1'],
                 'etat' => ['required', Rule::in(['Disponible', 'Indisponible', 'Maintenance'])],
-            ],
-            'demandes' => [
-                'user_id' => ['required', 'exists:users,id'],
-                'ec_id' => ['required', 'exists:ecs,id'],
-                'enseignant_id' => ['required', 'exists:enseignants,id'],
-                'promotions_concernees' => ['required', 'array'],
-                'date_debut' => ['required', 'date'],
-                'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
-                'heure_debut' => ['required', 'date_format:H:i'],
-                'heure_fin' => ['required', 'date_format:H:i', 'after:heure_debut'],
-                'effectif_total' => ['required', 'integer', 'min:1'],
-                'statut' => ['required', Rule::in(['En attente', 'Acceptée', 'Refusée', 'Attribuée'])],
-                'motif_refus' => ['nullable', 'string'],
-            ],
-            'programmations' => [
-                'demande_auditoire_id' => ['nullable', 'exists:demandes_auditoire,id'],
-                'ec_id' => ['required', 'exists:ecs,id'],
-                'enseignant_id' => ['required', 'exists:enseignants,id'],
-                'auditoire_id' => ['required', 'exists:auditoires,id'],
-                'promotions_concernees' => ['required', 'array'],
-                'date_debut' => ['required', 'date'],
-                'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
-                'heure_debut' => ['required', 'date_format:H:i'],
-                'heure_fin' => ['required', 'date_format:H:i', 'after:heure_debut'],
-                'effectif_total' => ['required', 'integer', 'min:1'],
-                'statut' => ['required', Rule::in(['Brouillon', 'Validée', 'Annulée'])],
             ],
             default => abort(404),
         };
@@ -246,85 +165,6 @@ class AdminCrudController extends Controller
                 'fields' => ['role_id' => 'select:roles', 'name' => 'text', 'email' => 'email', 'password' => 'password', 'confirme' => 'checkbox', 'domaine_id' => 'select:domaines', 'promotion_id' => 'select:promotions'],
                 'columns' => ['name', 'email', 'role.nom', 'confirme', 'domaine.nom', 'promotion.nom'],
             ],
-            'domaines' => [
-                'model' => Domaine::class,
-                'title' => 'Domaines',
-                'singular' => 'Domaine',
-                'search' => ['code', 'nom'],
-                'fields' => ['code' => 'text', 'nom' => 'text', 'description' => 'textarea'],
-                'columns' => ['code', 'nom', 'description'],
-            ],
-            'filieres' => [
-                'model' => Filiere::class,
-                'title' => 'Filières',
-                'singular' => 'Filière',
-                'search' => ['code', 'nom'],
-                'with' => ['domaine'],
-                'fields' => ['domaine_id' => 'select:domaines', 'code' => 'text', 'nom' => 'text', 'description' => 'textarea'],
-                'columns' => ['code', 'nom', 'domaine.nom'],
-            ],
-            'mentions' => [
-                'model' => Mention::class,
-                'title' => 'Mentions',
-                'singular' => 'Mention',
-                'search' => ['code', 'nom'],
-                'with' => ['filiere'],
-                'fields' => ['filiere_id' => 'select:filieres', 'code' => 'text', 'nom' => 'text', 'description' => 'textarea'],
-                'columns' => ['code', 'nom', 'filiere.nom'],
-            ],
-            'promotions' => [
-                'model' => Promotion::class,
-                'title' => 'Promotions',
-                'singular' => 'Promotion',
-                'search' => ['code', 'nom'],
-                'with' => ['mention'],
-                'fields' => ['mention_id' => 'select:mentions', 'code' => 'text', 'nom' => 'text', 'niveau' => 'number', 'effectif' => 'number'],
-                'columns' => ['code', 'nom', 'niveau', 'effectif', 'mention.nom'],
-            ],
-            'annees-academiques' => [
-                'model' => AnneeAcademique::class,
-                'title' => 'Années académiques',
-                'singular' => 'Année académique',
-                'search' => ['libelle'],
-                'fields' => ['libelle' => 'text', 'date_debut' => 'date', 'date_fin' => 'date', 'active' => 'checkbox'],
-                'columns' => ['libelle', 'date_debut', 'date_fin', 'active'],
-            ],
-            'programmes-academiques' => [
-                'model' => ProgrammeAcademique::class,
-                'title' => 'Programmes académiques',
-                'singular' => 'Programme académique',
-                'search' => ['code', 'nom'],
-                'with' => ['anneeAcademique'],
-                'fields' => ['annee_academique_id' => 'select:annees-academiques', 'code' => 'text', 'nom' => 'text', 'description' => 'textarea'],
-                'columns' => ['code', 'nom', 'anneeAcademique.libelle'],
-            ],
-            'ues' => [
-                'model' => Ue::class,
-                'title' => 'UE',
-                'singular' => 'UE',
-                'search' => ['code', 'nom'],
-                'with' => ['programmeAcademique'],
-                'fields' => ['programme_academique_id' => 'select:programmes-academiques', 'code' => 'text', 'nom' => 'text', 'credits' => 'number', 'volume_horaire' => 'number'],
-                'columns' => ['code', 'nom', 'credits', 'volume_horaire', 'programmeAcademique.nom'],
-            ],
-            'ecs' => [
-                'model' => Ec::class,
-                'title' => 'EC',
-                'singular' => 'EC',
-                'search' => ['code', 'nom'],
-                'with' => ['ue'],
-                'fields' => ['ue_id' => 'select:ues', 'code' => 'text', 'nom' => 'text', 'volume_horaire' => 'number', 'statut' => 'enum:Non commencé,En cours,Entièrement dispensé'],
-                'columns' => ['code', 'nom', 'volume_horaire', 'statut', 'ue.nom'],
-            ],
-            'enseignants' => [
-                'model' => Enseignant::class,
-                'title' => 'Enseignants',
-                'singular' => 'Enseignant',
-                'search' => ['matricule', 'nom', 'prenom', 'email'],
-                'with' => ['user'],
-                'fields' => ['user_id' => 'select:users', 'matricule' => 'text', 'nom' => 'text', 'prenom' => 'text', 'email' => 'email', 'telephone' => 'text', 'grade' => 'text'],
-                'columns' => ['matricule', 'nom', 'prenom', 'email', 'grade'],
-            ],
             'batiments' => [
                 'model' => Batiment::class,
                 'title' => 'Bâtiments',
@@ -341,24 +181,6 @@ class AdminCrudController extends Controller
                 'with' => ['batiment'],
                 'fields' => ['batiment_id' => 'select:batiments', 'nom' => 'text', 'capacite' => 'number', 'etat' => 'enum:Disponible,Indisponible,Maintenance'],
                 'columns' => ['nom', 'capacite', 'etat', 'batiment.nom'],
-            ],
-            'demandes' => [
-                'model' => DemandeAuditoire::class,
-                'title' => 'Demandes d\'auditoire',
-                'singular' => 'Demande',
-                'search' => ['statut', 'motif_refus'],
-                'with' => ['user', 'ec', 'enseignant'],
-                'fields' => ['user_id' => 'select:users', 'ec_id' => 'select:ecs', 'enseignant_id' => 'select:enseignants', 'promotions_concernees' => 'select-multiple:promotions', 'date_debut' => 'date', 'date_fin' => 'date', 'heure_debut' => 'time', 'heure_fin' => 'time', 'effectif_total' => 'number', 'statut' => 'enum:En attente,Acceptée,Refusée,Attribuée'],
-                'columns' => ['user.name', 'ec.nom', 'enseignant.nom', 'date_debut', 'heure_debut', 'heure_fin', 'effectif_total', 'statut'],
-            ],
-            'programmations' => [
-                'model' => Programmation::class,
-                'title' => 'Programmations',
-                'singular' => 'Programmation',
-                'search' => ['statut'],
-                'with' => ['demandeAuditoire', 'ec', 'enseignant', 'auditoire'],
-                'fields' => ['demande_auditoire_id' => 'select:demandes', 'ec_id' => 'select:ecs', 'enseignant_id' => 'select:enseignants', 'auditoire_id' => 'select:auditoires', 'promotions_concernees' => 'select-multiple:promotions', 'date_debut' => 'date', 'date_fin' => 'date', 'heure_debut' => 'time', 'heure_fin' => 'time', 'effectif_total' => 'number', 'statut' => 'enum:Brouillon,Validée,Annulée'],
-                'columns' => ['ec.nom', 'enseignant.nom', 'auditoire.nom', 'date_debut', 'heure_debut', 'heure_fin', 'statut'],
             ],
         ];
 
@@ -425,7 +247,6 @@ class AdminCrudController extends Controller
     private function optionOrderColumn(string $resource): string
     {
         return match ($resource) {
-            'annees-academiques' => 'libelle',
             'users' => 'name',
             default => 'nom',
         };
@@ -436,7 +257,6 @@ class AdminCrudController extends Controller
         return match ($resource) {
             'roles' => $model->nom,
             'users' => $model->name.' - '.$model->email,
-            'annees-academiques' => $model->libelle,
             default => trim(($model->code ?? '').' '.$model->nom),
         };
     }

@@ -9,7 +9,7 @@
     <style>
         body { background: #f5f7fb; }
         .app-shell { min-height: 100vh; }
-        .sidebar { width: 280px; background: #14213d; color: #fff; overflow-y: auto; }
+        .sidebar { width: 280px; background: #14213d; color: #fff; overflow-y: auto; flex-shrink: 0; }
         .sidebar a { color: rgba(255, 255, 255, .78); text-decoration: none; }
         .sidebar a:hover, .sidebar .active { color: #fff; background: rgba(255, 255, 255, .1); }
         .sidebar .sidebar-section { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: rgba(255,255,255,.4); padding: .5rem .75rem; margin-top: .5rem; }
@@ -33,30 +33,38 @@
                 </a>
 
                 @if(auth()->user()->hasRole('Administrateur'))
-                    <div class="sidebar-section">Gestion</div>
+                    <div class="sidebar-section">Gestion des comptes</div>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('admin.crud.index', 'users') ? 'active' : '' }}" href="{{ route('admin.crud.index', 'users') }}"><i class="bi bi-people me-2"></i>Utilisateurs</a>
-                    <a class="px-3 py-2 rounded {{ request()->routeIs('admin.crud.index', 'enseignants') ? 'active' : '' }}" href="{{ route('admin.crud.index', 'enseignants') }}"><i class="bi bi-person-workspace me-2"></i>Enseignants</a>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('admin.crud.index', 'roles') ? 'active' : '' }}" href="{{ route('admin.crud.index', 'roles') }}"><i class="bi bi-shield-lock me-2"></i>Rôles</a>
                     <div class="sidebar-section">Infrastructure</div>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('admin.crud.index', 'batiments') ? 'active' : '' }}" href="{{ route('admin.crud.index', 'batiments') }}"><i class="bi bi-building me-2"></i>Bâtiments</a>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('admin.crud.index', 'auditoires') ? 'active' : '' }}" href="{{ route('admin.crud.index', 'auditoires') }}"><i class="bi bi-door-open me-2"></i>Auditoires</a>
-                    <div class="sidebar-section">Académique</div>
-                    <a class="px-3 py-2 rounded {{ request()->routeIs('admin.crud.index', 'domaines') ? 'active' : '' }}" href="{{ route('admin.crud.index', 'domaines') }}"><i class="bi bi-diagram-3 me-2"></i>Domaines / Filières</a>
-                    <a class="px-3 py-2 rounded {{ request()->routeIs('admin.crud.index', 'ecs') ? 'active' : '' }}" href="{{ route('admin.crud.index', 'ecs') }}"><i class="bi bi-journal-bookmark me-2"></i>UE / EC</a>
-                    <div class="sidebar-section">Programmation</div>
+                    <div class="sidebar-section">Traitement des demandes</div>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('admin.attributions.*') ? 'active' : '' }}" href="{{ route('admin.attributions.index') }}"><i class="bi bi-calendar-check me-2"></i>Attributions</a>
-                    <a class="px-3 py-2 rounded {{ request()->routeIs('admin.crud.index', 'programmations') ? 'active' : '' }}" href="{{ route('admin.crud.index', 'programmations') }}"><i class="bi bi-calendar-week me-2"></i>Programmations</a>
-                    <a class="px-3 py-2 rounded {{ request()->routeIs('admin.crud.index', 'demandes') ? 'active' : '' }}" href="{{ route('admin.crud.index', 'demandes') }}"><i class="bi bi-inbox me-2"></i>Demandes</a>
                     <div class="sidebar-section">Autres</div>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('admin.notifications.*') ? 'active' : '' }}" href="{{ route('admin.notifications.index') }}"><i class="bi bi-bell me-2"></i>Notifications</a>
-                    <a class="px-3 py-2 rounded {{ request()->routeIs('admin.programmations.export') ? 'active' : '' }}" href="{{ route('admin.programmations.export') }}"><i class="bi bi-download me-2"></i>Exporter CSV</a>
                 @endif
 
-                @if(auth()->user()->hasRole('Décanat'))
-                    <div class="sidebar-section">Demandes</div>
+                @if(auth()->user()->hasRole('Decanat'))
+                    <div class="sidebar-section">Structure académique</div>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.crud.index', 'domaines') ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'domaines') }}"><i class="bi bi-diagram-3 me-2"></i>Domaines</a>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.crud.index', 'filieres') ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'filieres') }}"><i class="bi bi-diagram-3 me-2"></i>Filières</a>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.crud.index', 'mentions') ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'mentions') }}"><i class="bi bi-tag me-2"></i>Mentions</a>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.crud.index', 'promotions') ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'promotions') }}"><i class="bi bi-calendar2-range me-2"></i>Promotions</a>
+                    <div class="sidebar-section">Programmes</div>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.crud.index', 'annees-academiques') ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'annees-academiques') }}"><i class="bi bi-calendar3 me-2"></i>Années académiques</a>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.crud.index', 'programmes-academiques') ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'programmes-academiques') }}"><i class="bi bi-journal-richtext me-2"></i>Programmes</a>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.crud.index', 'ues') ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'ues') }}"><i class="bi bi-book me-2"></i>UE</a>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.crud.index', 'ecs') ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'ecs') }}"><i class="bi bi-journal-bookmark me-2"></i>EC</a>
+                    <div class="sidebar-section">Enseignement</div>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.crud.index', 'enseignants') ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'enseignants') }}"><i class="bi bi-person-workspace me-2"></i>Enseignants</a>
+                    <div class="sidebar-section">Demandes & Horaires</div>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.demandes.create') ? 'active' : '' }}" href="{{ route('decanat.demandes.create') }}"><i class="bi bi-plus-circle me-2"></i>Nouvelle demande</a>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.demandes.index') ? 'active' : '' }}" href="{{ route('decanat.demandes.index') }}"><i class="bi bi-calendar-plus me-2"></i>Mes demandes</a>
-                    <div class="sidebar-section">Consultation</div>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.programmations.*') ? 'active' : '' }}" href="{{ route('decanat.programmations.index') }}"><i class="bi bi-printer me-2"></i>Horaires</a>
+                    <div class="sidebar-section">Export</div>
+                    <a class="px-3 py-2 rounded" href="{{ route('decanat.export.pdf') }}"><i class="bi bi-file-earmark-pdf me-2"></i>Export PDF</a>
+                    <a class="px-3 py-2 rounded" href="{{ route('decanat.export.excel') }}"><i class="bi bi-file-earmark-excel me-2"></i>Export Excel</a>
                 @endif
 
                 @if(auth()->user()->hasRole('Enseignant'))
@@ -65,7 +73,7 @@
                     <a class="px-3 py-2 rounded {{ request()->routeIs('enseignant.programmations.*') ? 'active' : '' }}" href="{{ route('enseignant.programmations.index') }}"><i class="bi bi-clock me-2"></i>Mes horaires</a>
                 @endif
 
-                @if(auth()->user()->hasRole('Étudiant'))
+                @if(auth()->user()->hasRole('Etudiant'))
                     <div class="sidebar-section">Études</div>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('etudiant.programmations.*') ? 'active' : '' }}" href="{{ route('etudiant.programmations.index') }}"><i class="bi bi-calendar-week me-2"></i>Mon emploi du temps</a>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('etudiant.promotions.*') ? 'active' : '' }}" href="{{ route('etudiant.promotions.show') }}"><i class="bi bi-mortarboard me-2"></i>Ma promotion</a>
