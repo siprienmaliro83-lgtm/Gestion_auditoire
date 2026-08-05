@@ -7,10 +7,11 @@ FROM php:8.2-apache
 # --- Extensions PHP + outils nécessaires ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libzip-dev \
+        libpq-dev \
         unzip \
         git \
         curl \
-    && docker-php-ext-install pdo pdo_sqlite sqlite3 mbstring zip \
+    && docker-php-ext-install pdo pdo_sqlite sqlite3 pgsql pdo_pgsql mbstring zip \
     && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
     && rm -rf /var/lib/apt/lists/*
 

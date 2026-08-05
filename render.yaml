@@ -3,10 +3,23 @@
 # Le déploiement utilise obligatoirement Docker (runtime: docker).
 # Le Dockerfile à la racine construit l'image (Apache + PHP 8.2).
 #
+# BASE DE DONNÉES :
+# - Les disques persistants exigent un plan PAYANT (non disponible en gratuit).
+# - Le plan gratuit ne permet la persistance que via une base PostgreSQL
+#   (gratuite, 1 Go, mais qui EXPIRE après 30 jours).
+# - Le Blueprint ci-dessous crée la base + le service et branche
+#   automatiquement DATABASE_URL.
+#
 # Utilisation :
 #   1. Pousser ce fichier + le Dockerfile sur GitHub
 #   2. Sur Render : "New +" > "Blueprint" > sélectionner le dépôt
-#   OU créer manuellement un "Web Service" : Runtime = Docker
+#   OU créer manuellement un "Web Service" : Runtime = Docker,
+#   puis New > PostgreSQL (Free) et coller sa connection string
+#   dans la variable DATABASE_URL du service.
+
+databases:
+  - name: gestion-auditoire-db
+    plan: free
 
 services:
   - type: web
@@ -27,9 +40,11 @@ services:
       - key: APP_KEY
         sync: false # à générer puis coller ici (base64:...)
       - key: DB_CONNECTION
-        value: sqlite
-      - key: DB_DATABASE
-        value: /var/data/database.sqlite
+        value: pgsql
+      - key: DATABASE_URL
+        fromDatabase:
+          name: gestion-auditoire-db
+          property: connectionString
       - key: QUEUE_CONNECTION
         value: sync
       - key: SESSION_DRIVER
@@ -38,7 +53,3 @@ services:
         value: database
       - key: LOG_LEVEL
         value: error
-    disk:
-      name: sqlite-data
-      mountPath: /var/data
-      sizeGB: 1
