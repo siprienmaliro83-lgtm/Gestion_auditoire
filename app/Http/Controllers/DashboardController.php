@@ -63,6 +63,7 @@ class DashboardController extends Controller
                 ->latest()
                 ->take(5)
                 ->get(),
+            'recentNotifications' => $user->notifications()->latest()->take(5)->get(),
         ]);
     }
 
@@ -85,6 +86,7 @@ class DashboardController extends Controller
                 ->latest()
                 ->take(5)
                 ->get(),
+            'recentNotifications' => $user->notifications()->latest()->take(5)->get(),
         ]);
     }
 
@@ -112,6 +114,7 @@ class DashboardController extends Controller
             'role' => $role,
             'stats' => $stats,
             'recentProgrammations' => $recentProgrammations,
+            'recentNotifications' => $user->notifications()->latest()->take(5)->get(),
         ]);
     }
 
@@ -141,6 +144,7 @@ class DashboardController extends Controller
             'role' => $role,
             'stats' => $stats,
             'recentProgrammations' => $recentProgrammations,
+            'recentNotifications' => $user->notifications()->latest()->take(5)->get(),
         ]);
     }
 }

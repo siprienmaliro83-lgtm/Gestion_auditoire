@@ -21,7 +21,13 @@
                             if ($value instanceof \Carbon\CarbonInterface) {
                                 $value = $value->format('Y-m-d');
                             }
-                            $selectedValues = is_array($value) ? array_map('strval', $value) : [];
+                            if ($value instanceof \Illuminate\Support\Collection) {
+                                $selectedValues = $value->map(fn ($related) => (string) $related->getKey())->all();
+                            } elseif (is_array($value)) {
+                                $selectedValues = array_map('strval', $value);
+                            } else {
+                                $selectedValues = [];
+                            }
                         @endphp
                         <div class="{{ $type === 'textarea' || $type === 'select-multiple' ? 'col-12' : 'col-md-6' }}">
                             @if($type === 'checkbox')

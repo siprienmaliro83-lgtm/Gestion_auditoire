@@ -34,14 +34,24 @@
                     <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'users') }}"><i class="bi bi-people me-2"></i>Utilisateurs</a>
                     <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'batiments') }}"><i class="bi bi-building me-2"></i>Bâtiments</a>
                     <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'auditoires') }}"><i class="bi bi-door-open me-2"></i>Auditoires</a>
-                    <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'demandes') }}"><i class="bi bi-calendar-check me-2"></i>Demandes</a>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('admin.attributions.*') ? 'active' : '' }}" href="{{ route('admin.attributions.index') }}"><i class="bi bi-calendar-check me-2"></i>Demandes</a>
                     <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'programmations') }}"><i class="bi bi-calendar-week me-2"></i>Programmations</a>
                     <a class="px-3 py-2 rounded" href="{{ route('admin.notifications.index') }}"><i class="bi bi-bell me-2"></i>Notifications</a>
                     <a class="px-3 py-2 rounded" href="{{ route('admin.programmations.export') }}"><i class="bi bi-download me-2"></i>Exporter CSV</a>
                 @endif
                 @if(auth()->user()->hasRole('Décanat'))
+                    <div class="px-3 pt-3 pb-1 small text-uppercase" style="color: rgba(255,255,255,.45);">Auditoires</div>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.demandes.*') ? 'active' : '' }}" href="{{ route('decanat.demandes.index') }}"><i class="bi bi-calendar-plus me-2"></i>Demandes</a>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.programmations.*') ? 'active' : '' }}" href="{{ route('decanat.programmations.index') }}"><i class="bi bi-printer me-2"></i>Horaires</a>
+                    <div class="px-3 pt-3 pb-1 small text-uppercase" style="color: rgba(255,255,255,.45);">Structure académique</div>
+                    @php($decanatResource = request()->route('resource'))
+                    <a class="px-3 py-2 rounded {{ $decanatResource === 'domaines' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'domaines') }}"><i class="bi bi-diagram-3 me-2"></i>Domaines</a>
+                    <a class="px-3 py-2 rounded {{ $decanatResource === 'filieres' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'filieres') }}"><i class="bi bi-diagram-2 me-2"></i>Filières</a>
+                    <a class="px-3 py-2 rounded {{ $decanatResource === 'mentions' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'mentions') }}"><i class="bi bi-braces me-2"></i>Mentions</a>
+                    <a class="px-3 py-2 rounded {{ $decanatResource === 'promotions' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'promotions') }}"><i class="bi bi-people me-2"></i>Promotions</a>
+                    <a class="px-3 py-2 rounded {{ $decanatResource === 'programmes-academiques' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'programmes-academiques') }}"><i class="bi bi-journal-bookmark me-2"></i>Programmes</a>
+                    <a class="px-3 py-2 rounded {{ $decanatResource === 'ues' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'ues') }}"><i class="bi bi-journal me-2"></i>UE</a>
+                    <a class="px-3 py-2 rounded {{ $decanatResource === 'ecs' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'ecs') }}"><i class="bi bi-journal-text me-2"></i>EC</a>
                 @endif
                 @if(auth()->user()->hasRole('Enseignant'))
                     <a class="px-3 py-2 rounded {{ request()->routeIs('enseignant.ecs.*') ? 'active' : '' }}" href="{{ route('enseignant.ecs.index') }}"><i class="bi bi-journal-text me-2"></i>Mes EC</a>
@@ -49,7 +59,7 @@
                     <a class="px-3 py-2 rounded {{ request()->routeIs('notifications.*') ? 'active' : '' }}" href="{{ route('notifications.index') }}"><i class="bi bi-bell me-2"></i>Notifications</a>
                 @endif
                 @if(auth()->user()->hasRole('Étudiant'))
-                    <a class="px-3 py-2 rounded {{ request()->routeIs('etudiant.programmations.*') ? 'active' : '' }}" href="{{ route('etudiant.programmations.index') }}"><i class="bi bi-calendar-week me-2"></i>Horaire</a>
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('etudiant.programmations.*') ? 'active' : '' }}" href="{{ route('etudiant.programmations.index') }}"><i class="bi bi-calendar-week me-2"></i>Mon programme</a>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('etudiant.promotions.*') ? 'active' : '' }}" href="{{ route('etudiant.promotions.show') }}"><i class="bi bi-mortarboard me-2"></i>Promotion</a>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('notifications.*') ? 'active' : '' }}" href="{{ route('notifications.index') }}"><i class="bi bi-bell me-2"></i>Notifications</a>
                 @endif

@@ -57,4 +57,12 @@ class DemandeAuditoire extends Model
     {
         return $this->hasOne(Programmation::class);
     }
+
+    public function getPromotionsNomAttribute(): string
+    {
+        return Promotion::whereIn('id', $this->promotions_concernees ?? [])
+            ->orderBy('nom')
+            ->pluck('nom')
+            ->implode(', ');
+    }
 }

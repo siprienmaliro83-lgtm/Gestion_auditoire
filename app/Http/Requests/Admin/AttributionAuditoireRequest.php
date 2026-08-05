@@ -16,7 +16,6 @@ class AttributionAuditoireRequest extends FormRequest
         return [
             'demande_auditoire_id' => ['required', 'exists:demandes_auditoire,id'],
             'auditoire_id' => ['required', 'exists:auditoires,id'],
-            'statut' => ['required', 'in:Validée,Annulée'],
         ];
     }
 }

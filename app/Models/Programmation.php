@@ -12,6 +12,7 @@ class Programmation extends Model
 
     protected $fillable = [
         'demande_auditoire_id',
+        'annee_academique_id',
         'ec_id',
         'enseignant_id',
         'auditoire_id',
@@ -41,6 +42,11 @@ class Programmation extends Model
         return $this->belongsTo(DemandeAuditoire::class);
     }
 
+    public function anneeAcademique(): BelongsTo
+    {
+        return $this->belongsTo(AnneeAcademique::class);
+    }
+
     public function ec(): BelongsTo
     {
         return $this->belongsTo(Ec::class);
@@ -59,5 +65,13 @@ class Programmation extends Model
     public function valideur(): BelongsTo
     {
         return $this->belongsTo(User::class, 'validee_par');
+    }
+
+    public function getPromotionsNomAttribute(): string
+    {
+        return Promotion::whereIn('id', $this->promotions_concernees ?? [])
+            ->orderBy('nom')
+            ->pluck('nom')
+            ->implode(', ');
     }
 }

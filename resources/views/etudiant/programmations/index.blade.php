@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Mon emploi du temps - Étudiant')
-@section('page-title', 'Mon emploi du temps')
+@section('title', 'Mon programme - Étudiant')
+@section('page-title', 'Mon programme')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h5 class="mb-0">Emploi du temps de ma promotion</h5>
+    <h5 class="mb-0">Programme de ma promotion</h5>
     @if($promotion)
         <span class="badge bg-primary fs-6">{{ $promotion->nom }} — {{ $promotion->mention->nom ?? '' }}</span>
     @endif

@@ -43,17 +43,36 @@
                     </select>
                     @error('domaine_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-                <div class="mb-3 d-none" id="promotion-wrap">
-                    <label class="form-label" for="promotion_id">Promotion</label>
-                    <select class="form-select @error('promotion_id') is-invalid @enderror" id="promotion_id" name="promotion_id">
-                        <option value="">Sélectionner</option>
-                        @foreach($promotions as $promotion)
-                            <option value="{{ $promotion->id }}" @selected(old('promotion_id') == $promotion->id)>
-                                {{ $promotion->nom }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('promotion_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+
+                <div class="d-none" id="etudiant-wrap">
+                    <div class="mb-3">
+                        <label class="form-label" for="etudiant_domaine_id">Domaine</label>
+                        <select class="form-select" id="etudiant_domaine_id">
+                            <option value="">Sélectionner</option>
+                            @foreach($domaines as $domaine)
+                                <option value="{{ $domaine->id }}">{{ $domaine->nom }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="etudiant_filiere_id">Filière</label>
+                        <select class="form-select" id="etudiant_filiere_id" disabled>
+                            <option value="">Choisissez d'abord le domaine</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="etudiant_mention_id">Mention</label>
+                        <select class="form-select" id="etudiant_mention_id" disabled>
+                            <option value="">Choisissez d'abord la filière</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="promotion_id">Promotion</label>
+                        <select class="form-select @error('promotion_id') is-invalid @enderror" id="promotion_id" name="promotion_id" disabled>
+                            <option value="">Choisissez d'abord la mention</option>
+                        </select>
+                        @error('promotion_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label" for="password">Mot de passe</label>
@@ -80,14 +99,67 @@
     <script>
         const roleSelect = document.getElementById('role_id');
         const domaineWrap = document.getElementById('domaine-wrap');
-        const promotionWrap = document.getElementById('promotion-wrap');
+        const etudiantWrap = document.getElementById('etudiant-wrap');
 
         function syncRoleFields() {
             const selected = roleSelect.options[roleSelect.selectedIndex];
             const role = selected ? selected.dataset.role : '';
             domaineWrap.classList.toggle('d-none', role !== 'Décanat');
-            promotionWrap.classList.toggle('d-none', role !== 'Étudiant');
+            etudiantWrap.classList.toggle('d-none', role !== 'Étudiant');
         }
+
+        const etudiantDomaine = document.getElementById('etudiant_domaine_id');
+        const etudiantFiliere = document.getElementById('etudiant_filiere_id');
+        const etudiantMention = document.getElementById('etudiant_mention_id');
+        const etudiantPromotion = document.getElementById('promotion_id');
+
+        function resetSelect(select, placeholder) {
+            select.innerHTML = '<option value="">' + placeholder + '</option>';
+            select.disabled = true;
+        }
+
+        async function loadOptions(url, target, placeholder) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                resetSelect(target, placeholder);
+                if (data.length) {
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.text = (item.code ? item.code + ' - ' : '') + item.nom;
+                        target.appendChild(option);
+                    });
+                    target.disabled = false;
+                }
+            } catch (e) {
+                resetSelect(target, placeholder);
+            }
+        }
+
+        etudiantDomaine.addEventListener('change', function () {
+            resetSelect(etudiantFiliere, 'Aucune filière');
+            resetSelect(etudiantMention, 'Choisissez d\'abord la filière');
+            resetSelect(etudiantPromotion, 'Choisissez d\'abord la mention');
+            const domaineId = this.value;
+            if (!domaineId) return;
+            loadOptions('{{ route('api.filieres') }}?domaine_id=' + domaineId, etudiantFiliere, 'Aucune filière');
+        });
+
+        etudiantFiliere.addEventListener('change', function () {
+            resetSelect(etudiantMention, 'Aucune mention');
+            resetSelect(etudiantPromotion, 'Choisissez d\'abord la mention');
+            const filiereId = this.value;
+            if (!filiereId) return;
+            loadOptions('{{ route('api.mentions') }}?filiere_id=' + filiereId, etudiantMention, 'Aucune mention');
+        });
+
+        etudiantMention.addEventListener('change', function () {
+            resetSelect(etudiantPromotion, 'Aucune promotion');
+            const mentionId = this.value;
+            if (!mentionId) return;
+            loadOptions('{{ route('api.promotions') }}?mention_id=' + mentionId, etudiantPromotion, 'Aucune promotion');
+        });
 
         roleSelect.addEventListener('change', syncRoleFields);
         syncRoleFields();

@@ -27,4 +27,9 @@ class AnneeAcademique extends Model
     {
         return $this->hasMany(ProgrammeAcademique::class);
     }
+
+    public function programmations(): HasMany
+    {
+        return $this->hasMany(Programmation::class);
+    }
 }

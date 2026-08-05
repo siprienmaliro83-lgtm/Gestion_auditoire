@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Enseignant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Enseignant;
 use App\Models\Programmation;
 use Illuminate\View\View;
 
@@ -12,10 +11,7 @@ class ProgrammationEnseignantController extends Controller
     public function index(): View
     {
         $user = auth()->user();
-
-        $enseignant = Enseignant::where('user_id', $user->id)
-            ->orWhere('email', $user->email)
-            ->first();
+        $enseignant = $user->enseignant;
 
         $programmations = collect();
         if ($enseignant) {

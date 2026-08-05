@@ -4,85 +4,83 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AttributionAuditoireRequest;
+use App\Http\Requests\Admin\RejetDemandeRequest;
 use App\Models\Auditoire;
 use App\Models\DemandeAuditoire;
-use App\Models\Programmation;
 use App\Services\ProgrammationNotificationService;
+use App\Services\ProgrammationService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AttributionAuditoireController extends Controller
 {
-    public function index(): View
+    public function index(Request $request, ProgrammationService $service): View
     {
         $demandes = DemandeAuditoire::with(['ec', 'enseignant', 'user'])
             ->whereIn('statut', ['En attente', 'Acceptée', 'Attribuée'])
             ->latest()
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
+
+        $auditoiresDisponibles = $demandes
+            ->getCollection()
+            ->mapWithKeys(fn (DemandeAuditoire $demande) => [
+                $demande->id => $service->auditoiresDisponibles($demande),
+            ]);
 
         return view('admin.attributions.index', [
             'demandes' => $demandes,
             'auditoires' => Auditoire::with('batiment')->get(),
+            'auditoiresDisponibles' => $auditoiresDisponibles,
         ]);
     }
 
-    public function store(AttributionAuditoireRequest $request, ProgrammationNotificationService $notificationService): RedirectResponse
+    public function show(DemandeAuditoire $demande, ProgrammationService $service): View
     {
-        $demande = DemandeAuditoire::findOrFail($request->input('demande_auditoire_id'));
-        $auditoire = Auditoire::findOrFail($request->input('auditoire_id'));
+        abort_unless(
+            in_array($demande->statut, ['En attente', 'Acceptée', 'Attribuée', 'Refusée'], true),
+            404
+        );
 
-        if ($auditoire->capacite < $demande->effectif_total) {
-            return back()->withErrors(['auditoire_id' => 'La capacité de l\'auditoire est insuffisante.']);
-        }
-
-        $conflict = Programmation::where('auditoire_id', $auditoire->id)
-            ->where('date_debut', $demande->date_debut)
-            ->where('statut', 'Validée')
-            ->where(function ($query) use ($demande) {
-                $query->whereBetween('heure_debut', [$demande->heure_debut, $demande->heure_fin])
-                    ->orWhereBetween('heure_fin', [$demande->heure_debut, $demande->heure_fin]);
-            })
-            ->exists();
-
-        if ($conflict) {
-            return back()->withErrors(['auditoire_id' => 'Conflit de salle : cet auditoire est déjà réservé sur cette plage horaire.']);
-        }
-
-        $enseignantConflict = Programmation::where('enseignant_id', $demande->enseignant_id)
-            ->where('date_debut', $demande->date_debut)
-            ->where('statut', 'Validée')
-            ->where(function ($query) use ($demande) {
-                $query->whereBetween('heure_debut', [$demande->heure_debut, $demande->heure_fin])
-                    ->orWhereBetween('heure_fin', [$demande->heure_debut, $demande->heure_fin]);
-            })
-            ->exists();
-
-        if ($enseignantConflict) {
-            return back()->withErrors(['enseignant_id' => 'Conflit enseignant : ce professeur est déjà programmé à cette heure.']);
-        }
-
-        $programming = Programmation::create([
-            'demande_auditoire_id' => $demande->id,
-            'ec_id' => $demande->ec_id,
-            'enseignant_id' => $demande->enseignant_id,
-            'auditoire_id' => $auditoire->id,
-            'promotions_concernees' => $demande->promotions_concernees,
-            'date_debut' => $demande->date_debut,
-            'date_fin' => $demande->date_fin,
-            'heure_debut' => $demande->heure_debut,
-            'heure_fin' => $demande->heure_fin,
-            'effectif_total' => $demande->effectif_total,
-            'statut' => 'Validée',
-            'validee_par' => $request->user()->id,
-            'validee_a' => now(),
+        return view('admin.attributions.show', [
+            'demande' => $demande->load(['ec.ue', 'enseignant', 'user', 'programmation.auditoire']),
+            'auditoiresDisponibles' => $service->auditoiresDisponibles($demande),
         ]);
+    }
+
+    public function store(
+        AttributionAuditoireRequest $request,
+        ProgrammationService $service,
+        ProgrammationNotificationService $notificationService,
+    ): RedirectResponse {
+        $demande = DemandeAuditoire::findOrFail($request->validated('demande_auditoire_id'));
+        $auditoire = Auditoire::findOrFail($request->validated('auditoire_id'));
+
+        $programmation = $service->attribuer($demande, $auditoire, $request->user());
+
+        $notificationService->notifyForDemande($demande, $programmation->id, $auditoire->nom);
+
+        return redirect()
+            ->route('admin.attributions.show', $demande)
+            ->with('success', 'Auditoire attribué avec succès. La programmation a été créée.');
+    }
+
+    public function rejeter(RejetDemandeRequest $request, DemandeAuditoire $demande, ProgrammationNotificationService $notificationService): RedirectResponse
+    {
+        if (in_array($demande->statut, ['Attribuée', 'Refusée'], true)) {
+            return back()->withErrors(['demande' => 'Cette demande a déjà été traitée.']);
+        }
 
         $demande->update([
-            'statut' => 'Attribuée',
+            'statut' => 'Refusée',
+            'motif_refus' => $request->validated('motif_refus'),
         ]);
 
-        $notificationService->notifyForDemande($demande, $programming->id, $auditoire->nom);
+        $notificationService->notifyStatut($demande, 'Refusée');
 
-        return redirect()->route('admin.attributions.index')->with('success', 'Auditoire attribué avec succès.');
+        return redirect()
+            ->route('admin.attributions.index')
+            ->with('success', 'Demande refusée et motif enregistré.');
     }
 }

@@ -89,11 +89,52 @@
                                         <small>{{ \Carbon\Carbon::parse($prog->date_debut)->format('d/m/Y') }} {{ substr($prog->heure_debut, 0, 5) }}</small>
                                     </td>
                                 </tr>
-                            @empty
+                                @empty
                                 <tr><td class="text-muted text-center">Aucune programmation.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-lg-6">
+            <div class="card stat-card">
+                <div class="card-header bg-white fw-semibold d-flex justify-content-between">
+                    <span><i class="bi bi-bell me-1"></i>Mes notifications</span>
+                    <a href="{{ route('notifications.index') }}" class="text-primary small">Voir tout</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    @forelse($recentNotifications ?? [] as $notification)
+                        <div class="list-group-item {{ $notification->read_at ? '' : 'bg-light' }}">
+                            <div class="fw-semibold small">{{ data_get($notification->data, 'title', 'Notification') }}</div>
+                            <small class="text-muted">{{ data_get($notification->data, 'message', '') }}</small>
+                        </div>
+                    @empty
+                        <div class="list-group-item text-muted">Aucune notification.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card stat-card">
+                <div class="card-header bg-white fw-semibold">
+                    <i class="bi bi-diagram-3 me-1"></i>Actions rapides
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ route('admin.attributions.index') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-door-open me-1"></i>Traiter les demandes
+                        </a>
+                        <a href="{{ route('admin.crud.index', 'users') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-people me-1"></i>Gérer les utilisateurs
+                        </a>
+                        <a href="{{ route('admin.crud.index', 'auditoires') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-buildings me-1"></i>Gérer les auditoires
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -156,6 +197,23 @@
         </div>
     </div>
 
+    <div class="card stat-card mt-4">
+        <div class="card-header bg-white fw-semibold d-flex justify-content-between">
+            <span><i class="bi bi-bell me-1"></i>Mes notifications</span>
+            <a href="{{ route('notifications.index') }}" class="text-primary small">Voir tout</a>
+        </div>
+        <div class="list-group list-group-flush">
+            @forelse($recentNotifications ?? [] as $notification)
+                <div class="list-group-item {{ $notification->read_at ? '' : 'bg-light' }}">
+                    <div class="fw-semibold small">{{ data_get($notification->data, 'title', 'Notification') }}</div>
+                    <small class="text-muted">{{ data_get($notification->data, 'message', '') }}</small>
+                </div>
+            @empty
+                <div class="list-group-item text-muted">Aucune notification.</div>
+            @endforelse
+        </div>
+    </div>
+
 @elseif($role === 'Enseignant')
     <div class="row g-3 mb-4">
         @foreach([
@@ -191,11 +249,28 @@
                             <td>{{ \Carbon\Carbon::parse($prog->date_debut)->format('d/m/Y') }}</td>
                             <td>{{ substr($prog->heure_debut, 0, 5) }} - {{ substr($prog->heure_fin, 0, 5) }}</td>
                         </tr>
-                    @empty
+                        @empty
                         <tr><td colspan="4" class="text-muted text-center">Aucune programmation.</td></tr>
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <div class="card stat-card mt-4">
+        <div class="card-header bg-white fw-semibold d-flex justify-content-between">
+            <span><i class="bi bi-bell me-1"></i>Mes notifications</span>
+            <a href="{{ route('notifications.index') }}" class="text-primary small">Voir tout</a>
+        </div>
+        <div class="list-group list-group-flush">
+            @forelse($recentNotifications ?? [] as $notification)
+                <div class="list-group-item {{ $notification->read_at ? '' : 'bg-light' }}">
+                    <div class="fw-semibold small">{{ data_get($notification->data, 'title', 'Notification') }}</div>
+                    <small class="text-muted">{{ data_get($notification->data, 'message', '') }}</small>
+                </div>
+            @empty
+                <div class="list-group-item text-muted">Aucune notification.</div>
+            @endforelse
         </div>
     </div>
 
@@ -253,6 +328,23 @@
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="card stat-card mt-4">
+        <div class="card-header bg-white fw-semibold d-flex justify-content-between">
+            <span><i class="bi bi-bell me-1"></i>Mes notifications</span>
+            <a href="{{ route('notifications.index') }}" class="text-primary small">Voir tout</a>
+        </div>
+        <div class="list-group list-group-flush">
+            @forelse($recentNotifications ?? [] as $notification)
+                <div class="list-group-item {{ $notification->read_at ? '' : 'bg-light' }}">
+                    <div class="fw-semibold small">{{ data_get($notification->data, 'title', 'Notification') }}</div>
+                    <small class="text-muted">{{ data_get($notification->data, 'message', '') }}</small>
+                </div>
+            @empty
+                <div class="list-group-item text-muted">Aucune notification.</div>
+            @endforelse
         </div>
     </div>
 @endif

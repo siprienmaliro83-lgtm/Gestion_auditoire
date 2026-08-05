@@ -5,15 +5,12 @@ namespace App\Notifications;
 use Illuminate\Notifications\Messages\DatabaseMessage;
 use Illuminate\Notifications\Notification;
 
-class ProgrammationAttribueeNotification extends Notification
+class DemandeStatutNotification extends Notification
 {
     public function __construct(
         protected string $message,
         protected int $demandeId,
-        protected int $programmationId,
-        protected ?string $date = null,
-        protected ?string $heureDebut = null,
-        protected ?string $heureFin = null,
+        protected string $statut,
     ) {
     }
 
@@ -25,14 +22,10 @@ class ProgrammationAttribueeNotification extends Notification
     public function toDatabase(object $notifiable): DatabaseMessage
     {
         return new DatabaseMessage([
-            'title' => 'Nouvelle programmation attribuée',
+            'title' => 'Statut de votre demande',
             'message' => $this->message,
             'demande_id' => $this->demandeId,
-            'programmation_id' => $this->programmationId,
-            'created_at' => now()->toDateTimeString(),
-            'date' => $this->date,
-            'heure_debut' => $this->heureDebut,
-            'heure_fin' => $this->heureFin,
+            'statut' => $this->statut,
         ]);
     }
 }

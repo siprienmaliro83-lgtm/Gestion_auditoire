@@ -7,11 +7,10 @@ use App\Http\Requests\Decanat\DemandeAuditoireRequest;
 use App\Models\DemandeAuditoire;
 use App\Models\Ec;
 use App\Models\Enseignant;
-use App\Models\Notification;
 use App\Models\Promotion;
+use App\Services\ProgrammationNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class DemandeAuditoireController extends Controller
@@ -41,7 +40,12 @@ class DemandeAuditoireController extends Controller
             ->get();
 
         return view('decanat.demandes.form', [
-            'ecs' => Ec::with('ue')->get(),
+            'ecs' => Ec::with('ue')
+                ->whereHas('ue.programmeAcademique.promotions.mention.filiere.domaine', function ($query) use ($user) {
+                    $query->where('id', $user->domaine_id);
+                })
+                ->orderBy('code')
+                ->get(),
             'enseignants' => Enseignant::orderBy('nom')->get(),
             'promotions' => $promotions,
             'item' => new DemandeAuditoire(),
@@ -82,7 +86,7 @@ class DemandeAuditoireController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, DemandeAuditoire $demande): RedirectResponse
+    public function updateStatus(Request $request, DemandeAuditoire $demande, ProgrammationNotificationService $notificationService): RedirectResponse
     {
         $request->validate([
             'statut' => ['required', 'in:En attente,Acceptée,Refusée,Attribuée'],
@@ -91,17 +95,7 @@ class DemandeAuditoireController extends Controller
 
         $demande->update($request->only(['statut', 'motif_refus']));
 
-        Notification::create([
-            'id' => (string) Str::uuid(),
-            'type' => 'App\\Notifications\\DemandeStatusChanged',
-            'notifiable_type' => \App\Models\User::class,
-            'notifiable_id' => $demande->user_id,
-            'data' => [
-                'message' => sprintf('La demande d\'%s a été mise à jour : %s.', $demande->ec?->nom ?? 'EC', $demande->statut),
-                'demande_id' => $demande->id,
-                'statut' => $demande->statut,
-            ],
-        ]);
+        $notificationService->notifyStatut($demande, $demande->statut);
 
         return back()->with('success', 'Statut de la demande mis à jour.');
     }

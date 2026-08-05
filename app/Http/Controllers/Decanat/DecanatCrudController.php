@@ -30,6 +30,8 @@ class DecanatCrudController extends Controller
             $query->with($relation);
         }
 
+        $this->scopeToDomaine($query, $resource, auth()->user()?->domaine_id);
+
         if ($search = request('q')) {
             $query->where(function ($builder) use ($config, $search): void {
                 foreach ($config['search'] as $column) {
@@ -54,7 +56,7 @@ class DecanatCrudController extends Controller
             'config' => $config,
             'item' => new $config['model'](),
             'options' => $this->options($config),
-            'ecs' => $resource === 'enseignants' ? Ec::with('ue')->orderBy('code')->get() : null,
+            'ecs' => $resource === 'enseignants' ? $this->domainEcs() : null,
             'enseignant' => null,
         ]);
     }
@@ -68,8 +70,15 @@ class DecanatCrudController extends Controller
             $ecIds = $request->input('ec_ids', []);
             unset($data['ec_ids']);
             $enseignant = $config['model']::create($data);
-            if (!empty($ecIds)) {
+            if (! empty($ecIds)) {
                 $enseignant->ecs()->attach($ecIds);
+            }
+        } elseif ($resource === 'programmes-academiques') {
+            $promotionIds = $request->input('promotions', []);
+            unset($data['promotions']);
+            $programme = $config['model']::create($data);
+            if (! empty($promotionIds)) {
+                $programme->promotions()->attach($promotionIds);
             }
         } else {
             $config['model']::create($data);
@@ -88,7 +97,7 @@ class DecanatCrudController extends Controller
         $ecs = null;
         $enseignant = null;
         if ($resource === 'enseignants') {
-            $ecs = Ec::with('ue')->orderBy('code')->get();
+            $ecs = $this->domainEcs();
             $enseignant = $item;
         }
 
@@ -113,6 +122,11 @@ class DecanatCrudController extends Controller
             unset($data['ec_ids']);
             $item->update($data);
             $item->ecs()->sync($ecIds);
+        } elseif ($resource === 'programmes-academiques') {
+            $promotionIds = $request->input('promotions', []);
+            unset($data['promotions']);
+            $item->update($data);
+            $item->promotions()->sync($promotionIds);
         } else {
             $item->update($data);
         }
@@ -140,10 +154,14 @@ class DecanatCrudController extends Controller
 
         return match ($resource) {
             'domaines' => self::basicRules('domaines', $id),
-            'filieres' => self::basicRules('filieres', $id) + ['domaine_id' => ['required', 'exists:domaines,id']],
-            'mentions' => self::basicRules('mentions', $id) + ['filiere_id' => ['required', 'exists:filieres,id']],
+            'filieres' => self::basicRules('filieres', $id) + [
+                'domaine_id' => ['required', 'exists:domaines,id', self::inDomaineRule('Ce domaine ne vous est pas rattaché.', fn ($value, $domaineId) => Domaine::whereKey($value)->whereKey($domaineId))],
+            ],
+            'mentions' => self::basicRules('mentions', $id) + [
+                'filiere_id' => ['required', 'exists:filieres,id', self::inDomaineRule('Cette filière n\'appartient pas à votre domaine.', fn ($value, $domaineId) => Filiere::whereKey($value)->where('domaine_id', $domaineId))],
+            ],
             'promotions' => [
-                'mention_id' => ['required', 'exists:mentions,id'],
+                'mention_id' => ['required', 'exists:mentions,id', self::inDomaineRule('Cette mention n\'appartient pas à votre domaine.', fn ($value, $domaineId) => Mention::whereKey($value)->whereHas('filiere', fn ($q) => $q->where('domaine_id', $domaineId)))],
                 'code' => ['required', 'string', 'max:255', Rule::unique('promotions', 'code')->ignore($id)],
                 'nom' => ['required', 'string', 'max:255'],
                 'niveau' => ['required', 'integer', 'min:1', 'max:5'],
@@ -160,16 +178,18 @@ class DecanatCrudController extends Controller
                 'code' => ['required', 'string', 'max:255', Rule::unique('programmes_academiques', 'code')->ignore($id)],
                 'nom' => ['required', 'string', 'max:255'],
                 'description' => ['nullable', 'string'],
+                'promotions' => ['required', 'array', 'min:1'],
+                'promotions.*' => ['exists:promotions,id', self::inDomaineRule('Une promotion sélectionnée n\'appartient pas à votre domaine.', fn ($value, $domaineId) => Promotion::whereKey($value)->whereHas('mention.filiere', fn ($q) => $q->where('domaine_id', $domaineId)))],
             ],
             'ues' => [
-                'programme_academique_id' => ['required', 'exists:programmes_academiques,id'],
+                'programme_academique_id' => ['required', 'exists:programmes_academiques,id', self::inDomaineRule('Ce programme n\'appartient pas à votre domaine.', fn ($value, $domaineId) => ProgrammeAcademique::whereKey($value)->whereHas('promotions.mention.filiere', fn ($q) => $q->where('domaine_id', $domaineId)))],
                 'code' => ['required', 'string', 'max:255', Rule::unique('ues', 'code')->ignore($id)],
                 'nom' => ['required', 'string', 'max:255'],
                 'credits' => ['required', 'integer', 'min:0'],
                 'volume_horaire' => ['required', 'integer', 'min:0'],
             ],
             'ecs' => [
-                'ue_id' => ['required', 'exists:ues,id'],
+                'ue_id' => ['required', 'exists:ues,id', self::inDomaineRule('Cette UE n\'appartient pas à votre domaine.', fn ($value, $domaineId) => Ue::whereKey($value)->whereHas('programmeAcademique.promotions.mention.filiere', fn ($q) => $q->where('domaine_id', $domaineId)))],
                 'code' => ['required', 'string', 'max:255', Rule::unique('ecs', 'code')->ignore($id)],
                 'nom' => ['required', 'string', 'max:255'],
                 'volume_horaire' => ['required', 'integer', 'min:1'],
@@ -241,8 +261,8 @@ class DecanatCrudController extends Controller
                 'title' => 'Programmes académiques',
                 'singular' => 'Programme académique',
                 'search' => ['code', 'nom'],
-                'with' => ['anneeAcademique'],
-                'fields' => ['annee_academique_id' => 'select:annees-academiques', 'code' => 'text', 'nom' => 'text', 'description' => 'textarea'],
+                'with' => ['anneeAcademique', 'promotions'],
+                'fields' => ['annee_academique_id' => 'select:annees-academiques', 'code' => 'text', 'nom' => 'text', 'description' => 'textarea', 'promotions' => 'select-multiple:promotions'],
                 'columns' => ['code', 'nom', 'anneeAcademique.libelle'],
             ],
             'ues' => [
@@ -296,8 +316,24 @@ class DecanatCrudController extends Controller
         ];
     }
 
+    private static function inDomaineRule(string $message, \Closure $scope): \Closure
+    {
+        return function (string $attribute, $value, $fail) use ($message, $scope): void {
+            $domaineId = auth()->user()?->domaine_id;
+
+            if ($domaineId === null || $value === null) {
+                return;
+            }
+
+            if (! $scope($value, $domaineId)->exists()) {
+                $fail($message);
+            }
+        };
+    }
+
     private function options(array $config): array
     {
+        $domaineId = auth()->user()?->domaine_id;
         $options = [];
 
         foreach ($config['fields'] as $definition) {
@@ -307,7 +343,11 @@ class DecanatCrudController extends Controller
 
             $resource = str_replace(['select:', 'select-multiple:'], '', $definition);
             $optionConfig = self::config($resource);
-            $options[$resource] = $optionConfig['model']::query()
+            $query = $optionConfig['model']::query();
+
+            $this->scopeToDomaine($query, $resource, $domaineId);
+
+            $options[$resource] = $query
                 ->orderBy($this->optionOrderColumn($resource))
                 ->get()
                 ->map(fn (Model $model): array => [
@@ -317,6 +357,32 @@ class DecanatCrudController extends Controller
         }
 
         return $options;
+    }
+
+    private function domainEcs(): \Illuminate\Database\Eloquent\Collection
+    {
+        $query = Ec::with('ue');
+        $this->scopeToDomaine($query, 'ecs', auth()->user()?->domaine_id);
+
+        return $query->orderBy('code')->get();
+    }
+
+    private function scopeToDomaine($query, string $resource, ?int $domaineId): void
+    {
+        if ($domaineId === null) {
+            return;
+        }
+
+        match ($resource) {
+            'domaines' => $query->whereKey($domaineId),
+            'filieres' => $query->where('domaine_id', $domaineId),
+            'mentions' => $query->whereHas('filiere', fn ($q) => $q->where('domaine_id', $domaineId)),
+            'promotions' => $query->whereHas('mention.filiere', fn ($q) => $q->where('domaine_id', $domaineId)),
+            'programmes-academiques' => $query->whereHas('promotions.mention.filiere', fn ($q) => $q->where('domaine_id', $domaineId)),
+            'ues' => $query->whereHas('programmeAcademique.promotions.mention.filiere', fn ($q) => $q->where('domaine_id', $domaineId)),
+            'ecs' => $query->whereHas('ue.programmeAcademique.promotions.mention.filiere', fn ($q) => $q->where('domaine_id', $domaineId)),
+            default => null,
+        };
     }
 
     private function payload(array $data, array $config, ?Model $item = null): array

@@ -58,6 +58,7 @@ class AttributionNotificationTest extends TestCase
         $auditoire = Auditoire::factory()->create([
             'batiment_id' => $batiment->id,
             'capacite' => 200,
+            'etat' => 'Disponible',
         ]);
 
         $demande = DemandeAuditoire::factory()->create([
@@ -79,7 +80,7 @@ class AttributionNotificationTest extends TestCase
             'statut' => 'Validée',
         ]);
 
-        $response->assertRedirect('/admin/attributions');
+        $response->assertRedirect('/admin/attributions/'.$demande->id);
         $this->assertDatabaseHas('notifications', [
             'notifiable_type' => User::class,
             'notifiable_id' => $teacherUser->id,

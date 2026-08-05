@@ -5,11 +5,36 @@ namespace App\Services;
 use App\Models\DemandeAuditoire;
 use App\Models\Enseignant;
 use App\Models\User;
+use App\Notifications\DemandeStatutNotification;
 use App\Notifications\ProgrammationAttribueeNotification;
 use Illuminate\Support\Collection;
 
 class ProgrammationNotificationService
 {
+    /**
+     * Notifie l'utilisateur propriétaire de la demande du nouveau statut
+     * (ex. refus ou acceptation) — Notification Laravel en base de données.
+     */
+    public function notifyStatut(DemandeAuditoire $demande, string $statut): void
+    {
+        $owner = $demande->user;
+        if (! $owner) {
+            return;
+        }
+
+        $message = sprintf(
+            'Votre demande de cours de %s est passée au statut "%s".',
+            $demande->ec?->nom ?? 'cet EC',
+            $statut,
+        );
+
+        if ($statut === 'Refusée' && $demande->motif_refus) {
+            $message .= ' Motif : '.$demande->motif_refus;
+        }
+
+        $owner->notify(new DemandeStatutNotification($message, $demande->id, $statut));
+    }
+
     public function notifyForDemande(DemandeAuditoire $demande, int $programmationId, string $auditoireNom): void
     {
         $message = sprintf(
