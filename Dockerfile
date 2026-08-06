@@ -6,13 +6,11 @@ FROM node:22 AS node_builder
 WORKDIR /app
 
 COPY package*.json ./
-
 RUN npm install
 
 COPY . .
 
 RUN npm run build
-
 
 # ======================================
 # Étape 2 : Laravel + Apache
@@ -32,12 +30,11 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libicu-dev \
-    sqlite3 \
-    libsqlite3-dev \
+    default-mysql-client \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo \
-        pdo_sqlite \
+        pdo_mysql \
         mbstring \
         zip \
         exif \
@@ -56,31 +53,32 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Définir le dossier de travail
 WORKDIR /var/www/html
 
-# Copier les fichiers Composer
-COPY composer.json composer.lock ./
+# Copier tout le projet Laravel
+COPY . .
 
 # Installer les dépendances PHP
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Copier le projet Laravel
-COPY . .
-
-# Copier les fichiers compilés par Vite
+# Copier les assets Vite compilés
 COPY --from=node_builder /app/public/build ./public/build
 
-# Créer la base SQLite si elle n'existe pas
-RUN mkdir -p database && touch database/database.sqlite
+# Permissions Laravel
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 storage bootstrap/cache
 
-# Optimiser Composer
-RUN composer dump-autoload --optimize
-
-# Donner les permissions nécessaires
-RUN chown -R www-data:www-data storage bootstrap/cache database \
-    && chmod -R 775 storage bootstrap/cache database
-
-# Configurer Apache pour utiliser le dossier public
+# Configurer Apache pour pointer vers public/
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
-    /etc/apache2/sites-available/*.conf
+    /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!/var/www/html/public!g' \
+    /etc/apache2/apache2.conf \
+    /etc/apache2/conf-available/*.conf
+
+# Optimiser Laravel
+RUN php artisan config:clear \
+    && php artisan cache:clear \
+    && php artisan route:clear \
+    && php artisan view:clear \
+    && php artisan config:cache
 
 # Exposer le port
 EXPOSE 80
