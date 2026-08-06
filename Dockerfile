@@ -17,7 +17,7 @@ RUN npm run build
 # ======================================
 FROM php:8.3-apache
 
-# Installer les dépendances système
+# Installer les dépendances système et PHP
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -53,7 +53,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Définir le dossier de travail
 WORKDIR /var/www/html
 
-# Copier tout le projet Laravel
+# Copier tout le projet
 COPY . .
 
 # Installer les dépendances PHP
@@ -62,7 +62,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 # Copier les assets Vite compilés
 COPY --from=node_builder /app/public/build ./public/build
 
-# Permissions Laravel
+# Donner les permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
@@ -72,13 +72,6 @@ RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
     && sed -ri -e 's!/var/www/!/var/www/html/public!g' \
     /etc/apache2/apache2.conf \
     /etc/apache2/conf-available/*.conf
-
-# Optimiser Laravel
-RUN php artisan config:clear \
-    && php artisan cache:clear \
-    && php artisan route:clear \
-    && php artisan view:clear \
-    && php artisan config:cache
 
 # Exposer le port
 EXPOSE 80
