@@ -16,6 +16,8 @@ class EnseignantFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'telephone' => fake()->phoneNumber(),
             'grade' => fake()->randomElement(['Assistant', 'Chef de travaux', 'Professeur']),
+            'domaine_id' => null,
+            'statut' => 'Actif',
         ];
     }
 }

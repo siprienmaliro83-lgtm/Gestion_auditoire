@@ -27,8 +27,11 @@ class User extends Authenticatable
         'confirme',
         'name',
         'email',
+        'matricule',
         'password',
         'domaine_id',
+        'filiere_id',
+        'mention_id',
         'promotion_id',
     ];
 
@@ -64,6 +67,16 @@ class User extends Authenticatable
     public function domaine(): BelongsTo
     {
         return $this->belongsTo(Domaine::class);
+    }
+
+    public function filiere(): BelongsTo
+    {
+        return $this->belongsTo(Filiere::class);
+    }
+
+    public function mention(): BelongsTo
+    {
+        return $this->belongsTo(Mention::class);
     }
 
     public function promotion(): BelongsTo

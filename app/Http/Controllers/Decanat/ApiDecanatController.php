@@ -40,23 +40,11 @@ class ApiDecanatController extends Controller
 
     public function enseignants(Request $request): JsonResponse
     {
-        $ecId = $request->input('ec_id');
-
-        if ($ecId) {
-            $ec = Ec::with('enseignants')->find($ecId);
-            if (!$ec) {
-                return response()->json([]);
-            }
-            $enseignantIds = $ec->enseignants->pluck('id')->toArray();
-            $enseignants = Enseignant::with('ecs')
-                ->whereIn('id', $enseignantIds)
-                ->orderBy('nom')
-                ->get();
-        } else {
-            $enseignants = Enseignant::with('ecs')
-                ->orderBy('nom')
-                ->get();
-        }
+        $enseignants = Enseignant::with('ecs')
+            ->where('statut', 'Actif')
+            ->orderBy('nom')
+            ->orderBy('prenom')
+            ->get();
 
         return response()->json($enseignants->map(fn ($ens) => [
             'id' => $ens->id,

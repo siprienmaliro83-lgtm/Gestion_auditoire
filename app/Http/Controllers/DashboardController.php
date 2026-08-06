@@ -41,6 +41,8 @@ class DashboardController extends Controller
     private function admin($user, $role): View
     {
         $stats = [
+            'domaines' => \App\Models\Domaine::count(),
+            'decanats' => \App\Models\User::whereHas('role', fn ($q) => $q->whereIn('nom', ['Décanat', 'Administrateur']))->where('confirme', true)->count(),
             'auditoires' => Auditoire::count(),
             'batiments' => Batiment::count(),
             'enseignants' => Enseignant::count(),

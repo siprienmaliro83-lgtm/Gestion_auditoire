@@ -84,6 +84,7 @@ class UserSeeder extends Seeder
                 'role_id' => $etudiantRoleId,
                 'name' => $prenom . ' ' . $noms[$i],
                 'email' => strtolower($prenom) . '.' . strtolower($noms[$i]) . '@etudiant.universite.cd',
+                'matricule' => sprintf('ETU-%04d', $i + 1),
                 'password' => Hash::make('password'),
                 'confirme' => true,
                 'promotion_id' => $promoId,

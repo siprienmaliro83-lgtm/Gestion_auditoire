@@ -31,7 +31,9 @@
                     <i class="bi bi-speedometer2 me-2"></i>Dashboard
                 </a>
                 @if(auth()->user()->hasRole('Administrateur'))
+                    <a class="px-3 py-2 rounded {{ request()->routeIs('admin.comptes.*') ? 'active' : '' }}" href="{{ route('admin.comptes.index') }}"><i class="bi bi-person-check me-2"></i>Validation des comptes</a>
                     <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'users') }}"><i class="bi bi-people me-2"></i>Utilisateurs</a>
+                    <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'domaines') }}"><i class="bi bi-diagram-3 me-2"></i>Domaines</a>
                     <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'batiments') }}"><i class="bi bi-building me-2"></i>Bâtiments</a>
                     <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'auditoires') }}"><i class="bi bi-door-open me-2"></i>Auditoires</a>
                     <a class="px-3 py-2 rounded {{ request()->routeIs('admin.attributions.*') ? 'active' : '' }}" href="{{ route('admin.attributions.index') }}"><i class="bi bi-calendar-check me-2"></i>Demandes</a>
@@ -45,9 +47,8 @@
                     <a class="px-3 py-2 rounded {{ request()->routeIs('decanat.programmations.*') ? 'active' : '' }}" href="{{ route('decanat.programmations.index') }}"><i class="bi bi-printer me-2"></i>Horaires</a>
                     <div class="px-3 pt-3 pb-1 small text-uppercase" style="color: rgba(255,255,255,.45);">Structure académique</div>
                     @php($decanatResource = request()->route('resource'))
-                    <a class="px-3 py-2 rounded {{ $decanatResource === 'domaines' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'domaines') }}"><i class="bi bi-diagram-3 me-2"></i>Domaines</a>
-                    <a class="px-3 py-2 rounded {{ $decanatResource === 'filieres' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'filieres') }}"><i class="bi bi-diagram-2 me-2"></i>Filières</a>
-                    <a class="px-3 py-2 rounded {{ $decanatResource === 'mentions' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'mentions') }}"><i class="bi bi-braces me-2"></i>Mentions</a>
+                    <a class="px-3 py-2 rounded {{ $decanatResource === 'enseignants' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'enseignants') }}"><i class="bi bi-person-badge me-2"></i>Enseignants</a>
+                    <a class="px-3 py-2 rounded {{ $decanatResource === 'etudiants' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'etudiants') }}"><i class="bi bi-mortarboard me-2"></i>Étudiants</a>
                     <a class="px-3 py-2 rounded {{ $decanatResource === 'promotions' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'promotions') }}"><i class="bi bi-people me-2"></i>Promotions</a>
                     <a class="px-3 py-2 rounded {{ $decanatResource === 'programmes-academiques' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'programmes-academiques') }}"><i class="bi bi-journal-bookmark me-2"></i>Programmes</a>
                     <a class="px-3 py-2 rounded {{ $decanatResource === 'ues' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'ues') }}"><i class="bi bi-journal me-2"></i>UE</a>

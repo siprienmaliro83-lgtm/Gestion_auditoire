@@ -14,8 +14,8 @@
             <form method="POST" action="{{ route('login.store') }}" novalidate>
                 @csrf
                 <div class="mb-3">
-                    <label class="form-label" for="email">Email</label>
-                    <input class="form-control @error('email') is-invalid @enderror" id="email" name="email" type="email" value="{{ old('email') }}" required autofocus>
+                    <label class="form-label" for="email">Identifiant</label>
+                    <input class="form-control @error('email') is-invalid @enderror" id="email" name="email" type="text" value="{{ old('email') }}" placeholder="Email, matricule ou nom" required autofocus>
                     @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="mb-3">
@@ -33,7 +33,7 @@
             </form>
 
             <div class="text-center mt-3">
-                <a href="{{ route('register') }}">Créer un compte</a>
+                <a href="{{ route('account.request') }}">Demander un compte</a>
             </div>
         </div>
     </div>

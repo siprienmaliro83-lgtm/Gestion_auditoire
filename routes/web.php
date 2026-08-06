@@ -2,8 +2,8 @@
 
 use App\Http\Controllers\AcademiqueApiController;
 use App\Http\Controllers\Admin\AdminCrudController;
+use App\Http\Controllers\Auth\AccountRequestController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Admin\AttributionAuditoireController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\DashboardController;
@@ -27,8 +27,8 @@ Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
 
-    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
-    Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
+    Route::get('/demander-compte', [AccountRequestController::class, 'create'])->name('account.request');
+    Route::post('/demander-compte', [AccountRequestController::class, 'store'])->name('account.request.store');
 
     Route::get('/api/filieres', [AcademiqueApiController::class, 'filieres'])->name('api.filieres');
     Route::get('/api/mentions', [AcademiqueApiController::class, 'mentions'])->name('api.mentions');
@@ -41,6 +41,11 @@ Route::middleware('auth')->group(function (): void {
 
     Route::prefix('admin')->name('admin.')->middleware('role:Administrateur')->group(function (): void {
         Route::get('/', DashboardController::class)->name('index');
+        Route::get('/comptes', [\App\Http\Controllers\Admin\ComptesController::class, 'index'])->name('comptes.index');
+        Route::post('/comptes/{user}/approuver', [\App\Http\Controllers\Admin\ComptesController::class, 'approuver'])->name('comptes.approuver');
+        Route::post('/comptes/{user}/refuser', [\App\Http\Controllers\Admin\ComptesController::class, 'refuser'])->name('comptes.refuser');
+        Route::post('/comptes/{user}/activer', [\App\Http\Controllers\Admin\ComptesController::class, 'activer'])->name('comptes.activer');
+        Route::post('/comptes/{user}/desactiver', [\App\Http\Controllers\Admin\ComptesController::class, 'desactiver'])->name('comptes.desactiver');
         Route::get('/attributions', [AttributionAuditoireController::class, 'index'])->name('attributions.index');
         Route::get('/attributions/{demande}', [AttributionAuditoireController::class, 'show'])->name('attributions.show');
         Route::post('/attributions', [AttributionAuditoireController::class, 'store'])->name('attributions.store');

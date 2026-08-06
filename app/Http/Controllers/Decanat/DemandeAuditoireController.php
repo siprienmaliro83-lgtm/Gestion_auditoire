@@ -46,7 +46,7 @@ class DemandeAuditoireController extends Controller
                 })
                 ->orderBy('code')
                 ->get(),
-            'enseignants' => Enseignant::orderBy('nom')->get(),
+            'enseignants' => Enseignant::where('statut', 'Actif')->orderBy('nom')->orderBy('prenom')->get(),
             'promotions' => $promotions,
             'item' => new DemandeAuditoire(),
         ]);

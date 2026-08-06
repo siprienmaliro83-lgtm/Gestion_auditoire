@@ -23,8 +23,13 @@
 
                     <div class="col-md-6">
                         <label class="form-label" for="enseignant_id">Enseignant</label>
-                        <select class="form-select @error('enseignant_id') is-invalid @enderror" id="enseignant_id" name="enseignant_id" disabled>
-                            <option value="">Sélectionnez d'abord un EC</option>
+                        <select class="form-select @error('enseignant_id') is-invalid @enderror" id="enseignant_id" name="enseignant_id">
+                            <option value="">Sélectionner</option>
+                            @foreach($enseignants as $enseignant)
+                                <option value="{{ $enseignant->id }}" @selected(old('enseignant_id') == $enseignant->id)>
+                                    {{ trim($enseignant->prenom.' '.$enseignant->nom) }}@if($enseignant->grade) ({{ $enseignant->grade }})@endif
+                                </option>
+                            @endforeach
                         </select>
                         @error('enseignant_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
@@ -83,47 +88,3 @@
         </div>
     </div>
 @endsection
-
-@push('scripts')
-    <script>
-        const ecSelect = document.getElementById('ec_id');
-        const enseignantSelect = document.getElementById('enseignant_id');
-        const initialEcId = "{{ old('ec_id', '') }}";
-
-        function loadEnseignants(ecId) {
-            enseignantSelect.innerHTML = '<option value="">Sélectionner</option>';
-            enseignantSelect.disabled = true;
-            if (!ecId) {
-                enseignantSelect.innerHTML = '<option value="">Sélectionnez d\'abord un EC</option>';
-                return;
-            }
-
-            fetch('{{ route('decanat.api.enseignants') }}?ec_id=' + ecId)
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(ens => {
-                        const option = document.createElement('option');
-                        option.value = ens.id;
-                        option.text = (ens.prenom ? ens.prenom + ' ' : '') + ens.nom;
-                        enseignantSelect.appendChild(option);
-                    });
-                    enseignantSelect.disabled = false;
-
-                    const preselected = "{{ old('enseignant_id', '') }}";
-                    if (preselected) {
-                        enseignantSelect.value = preselected;
-                    }
-                })
-                .catch(() => {});
-        }
-
-        ecSelect.addEventListener('change', function () {
-            loadEnseignants(this.value);
-        });
-
-        if (initialEcId) {
-            ecSelect.value = initialEcId;
-            loadEnseignants(initialEcId);
-        }
-    </script>
-@endpush

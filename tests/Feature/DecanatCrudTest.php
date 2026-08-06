@@ -32,9 +32,32 @@ class DecanatCrudTest extends TestCase
         $domaine = Domaine::factory()->create();
         $user = $this->decanatUser($domaine);
 
-        foreach (['domaines', 'filieres', 'mentions', 'promotions', 'programmes-academiques', 'ues', 'ecs'] as $resource) {
+        foreach (['promotions', 'programmes-academiques', 'ues', 'ecs'] as $resource) {
             $this->actingAs($user)->get('/decanat/'.$resource)->assertOk();
         }
+    }
+
+    public function test_decanat_cannot_access_domaines_and_users(): void
+    {
+        $domaine = Domaine::factory()->create();
+        $user = $this->decanatUser($domaine);
+
+        $this->actingAs($user)->get('/decanat/domaines')->assertForbidden();
+        $this->actingAs($user)->get('/decanat/domaines/create')->assertForbidden();
+        $this->actingAs($user)->post('/decanat/domaines', ['code' => 'X', 'nom' => 'X'])->assertForbidden();
+        $this->actingAs($user)->get('/decanat/users')->assertForbidden();
+    }
+
+    public function test_decanat_cannot_create_filieres_and_mentions(): void
+    {
+        $domaine = Domaine::factory()->create();
+        $user = $this->decanatUser($domaine);
+
+        $this->actingAs($user)->get('/decanat/filieres')->assertForbidden();
+        $this->actingAs($user)->get('/decanat/filieres/create')->assertForbidden();
+        $this->actingAs($user)->post('/decanat/filieres', ['domaine_id' => $domaine->id, 'code' => 'F1', 'nom' => 'Filière'])->assertForbidden();
+        $this->actingAs($user)->get('/decanat/mentions')->assertForbidden();
+        $this->actingAs($user)->get('/decanat/mentions/create')->assertForbidden();
     }
 
     public function test_decanat_can_access_create_forms(): void
@@ -42,7 +65,7 @@ class DecanatCrudTest extends TestCase
         $domaine = Domaine::factory()->create();
         $user = $this->decanatUser($domaine);
 
-        foreach (['filieres', 'mentions', 'promotions', 'programmes-academiques', 'ues', 'ecs'] as $resource) {
+        foreach (['promotions', 'programmes-academiques', 'ues', 'ecs'] as $resource) {
             $this->actingAs($user)->get('/decanat/'.$resource.'/create')->assertOk();
         }
     }

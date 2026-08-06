@@ -20,11 +20,19 @@ class Enseignant extends Model
         'email',
         'telephone',
         'grade',
+        'specialite',
+        'domaine_id',
+        'statut',
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function domaine(): BelongsTo
+    {
+        return $this->belongsTo(Domaine::class);
     }
 
     public function ecs(): BelongsToMany

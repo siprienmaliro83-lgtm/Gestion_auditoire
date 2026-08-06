@@ -153,6 +153,16 @@ class AdminCrudController extends Controller
                 'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($id)],
                 'password' => [$id ? 'nullable' : 'required', 'string', 'min:8'],
                 'domaine_id' => ['nullable', 'exists:domaines,id'],
+                'filiere_id' => ['nullable', 'exists:filieres,id', function (string $attribute, $value, $fail): void {
+                    if ($value && request()->input('domaine_id') && ! \App\Models\Filiere::whereKey($value)->where('domaine_id', request()->input('domaine_id'))->exists()) {
+                        $fail('La filière choisie n\'appartient pas au domaine sélectionné.');
+                    }
+                }],
+                'mention_id' => ['nullable', 'exists:mentions,id', function (string $attribute, $value, $fail): void {
+                    if ($value && request()->input('filiere_id') && ! \App\Models\Mention::whereKey($value)->where('filiere_id', request()->input('filiere_id'))->exists()) {
+                        $fail('La mention choisie n\'appartient pas à la filière sélectionnée.');
+                    }
+                }],
                 'promotion_id' => ['nullable', 'exists:promotions,id'],
             ],
             'domaines' => self::basicRules('domaines', $id),
@@ -199,6 +209,9 @@ class AdminCrudController extends Controller
                 'email' => ['required', 'email', 'max:255', Rule::unique('enseignants', 'email')->ignore($id)],
                 'telephone' => ['nullable', 'string', 'max:255'],
                 'grade' => ['nullable', 'string', 'max:255'],
+                'specialite' => ['nullable', 'string', 'max:255'],
+                'domaine_id' => ['nullable', 'exists:domaines,id'],
+                'statut' => ['required', Rule::in(['Actif', 'Inactif'])],
             ],
             'batiments' => self::basicRules('batiments', $id, true),
             'auditoires' => [
@@ -253,9 +266,9 @@ class AdminCrudController extends Controller
                 'title' => 'Utilisateurs',
                 'singular' => 'Utilisateur',
                 'search' => ['name', 'email'],
-                'with' => ['role', 'domaine', 'promotion'],
-                'fields' => ['role_id' => 'select:roles', 'name' => 'text', 'email' => 'email', 'password' => 'password', 'domaine_id' => 'select:domaines', 'promotion_id' => 'select:promotions'],
-                'columns' => ['name', 'email', 'role.nom', 'domaine.nom', 'promotion.nom'],
+                'with' => ['role', 'domaine', 'filiere', 'mention', 'promotion'],
+                'fields' => ['role_id' => 'select:roles', 'name' => 'text', 'email' => 'email', 'password' => 'password', 'domaine_id' => 'select:domaines', 'filiere_id' => 'select:filieres', 'mention_id' => 'select:mentions', 'promotion_id' => 'select:promotions'],
+                'columns' => ['name', 'email', 'role.nom', 'domaine.nom', 'filiere.nom', 'mention.nom', 'confirme'],
             ],
             'domaines' => [
                 'model' => Domaine::class,
@@ -331,10 +344,10 @@ class AdminCrudController extends Controller
                 'model' => Enseignant::class,
                 'title' => 'Enseignants',
                 'singular' => 'Enseignant',
-                'search' => ['matricule', 'nom', 'prenom', 'email'],
-                'with' => ['user'],
-                'fields' => ['user_id' => 'select:users', 'matricule' => 'text', 'nom' => 'text', 'prenom' => 'text', 'email' => 'email', 'telephone' => 'text', 'grade' => 'text'],
-                'columns' => ['matricule', 'nom', 'prenom', 'email', 'grade'],
+                'search' => ['matricule', 'nom', 'prenom', 'email', 'specialite'],
+                'with' => ['user', 'domaine'],
+                'fields' => ['user_id' => 'select:users', 'matricule' => 'text', 'nom' => 'text', 'prenom' => 'text', 'email' => 'email', 'telephone' => 'text', 'grade' => 'text', 'specialite' => 'text', 'domaine_id' => 'select:domaines', 'statut' => 'enum:Actif,Inactif'],
+                'columns' => ['matricule', 'nom', 'prenom', 'email', 'grade', 'specialite', 'statut'],
             ],
             'batiments' => [
                 'model' => Batiment::class,

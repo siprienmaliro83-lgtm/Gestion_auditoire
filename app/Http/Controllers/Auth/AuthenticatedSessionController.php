@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -18,24 +20,30 @@ class AuthenticatedSessionController extends Controller
 
     public function store(LoginRequest $request): RedirectResponse
     {
-        $credentials = $request->validated();
+        $identifier = $request->input('email');
+        $password = $request->input('password');
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        // L'identifiant peut être un e-mail (tous les rôles), un matricule
+        // ou un nom (étudiants). On résout d'abord l'utilisateur, puis on
+        // vérifie le mot de passe, quel que soit le mode de connexion.
+        $user = User::where('email', $identifier)
+            ->orWhere('matricule', $identifier)
+            ->orWhere('name', $identifier)
+            ->first();
+
+        if (! $user || ! Hash::check($password, $user->password)) {
             return back()
-                ->withErrors(['email' => 'Adresse email ou mot de passe incorrect.'])
+                ->withErrors(['email' => 'Identifiant ou mot de passe incorrect.'])
                 ->onlyInput('email');
         }
 
-        $user = Auth::user();
-
-        if (! $user->confirme && ! $user->hasRole('Administrateur')) {
-            Auth::logout();
-
+        if (! $user->confirme) {
             return back()
-                ->withErrors(['email' => 'Votre compte n\'a pas encore été confirmé par l\'administrateur.'])
+                ->withErrors(['email' => 'Votre compte n\'a pas encore été validé par le Super Administrateur.'])
                 ->onlyInput('email');
         }
 
+        Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard'));

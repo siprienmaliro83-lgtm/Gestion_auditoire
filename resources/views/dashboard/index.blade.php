@@ -11,6 +11,8 @@
 @if($role === 'Administrateur')
     <div class="row g-3 mb-4">
         @foreach([
+            ['Domaines', $stats['domaines'] ?? 0, 'bi-diagram-3', 'primary'],
+            ['Décanats & Admins', $stats['decanats'] ?? 0, 'bi-building-check', 'primary'],
             ['Auditoires', $stats['auditoires'] ?? 0, 'bi-door-open', 'primary'],
             ['Bâtiments', $stats['batiments'] ?? 0, 'bi-buildings', 'primary'],
             ['Enseignants', $stats['enseignants'] ?? 0, 'bi-person-workspace', 'info'],
@@ -125,6 +127,9 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
+                        <a href="{{ route('admin.comptes.index') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-person-check me-1"></i>Valider les comptes
+                        </a>
                         <a href="{{ route('admin.attributions.index') }}" class="btn btn-outline-primary">
                             <i class="bi bi-door-open me-1"></i>Traiter les demandes
                         </a>
@@ -168,7 +173,11 @@
             <div class="card stat-card">
                 <div class="card-header bg-white fw-semibold">Domaine: {{ $user->domaine?->nom ?? 'Non défini' }}</div>
                 <div class="card-body">
-                    <p>Vous pouvez créer des demandes d'auditoire pour les EC de votre domaine.</p>
+                    <p class="text-muted mb-2">
+                        <i class="bi bi-diagram-2 me-1"></i>{{ $user->filiere?->nom ?? '—' }}
+                        <i class="bi bi-braces ms-2 me-1"></i>{{ $user->mention?->nom ?? '—' }}
+                    </p>
+                    <p>Vous pouvez créer des demandes d'auditoire pour les EC de votre périmètre.</p>
                     <div class="d-flex gap-2">
                         <a href="{{ route('decanat.demandes.create') }}" class="btn btn-primary btn-sm">
                             <i class="bi bi-plus-circle me-1"></i>Nouvelle demande
