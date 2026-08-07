@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AnneeAcademique;
 use App\Models\Auditoire;
 use App\Models\Batiment;
 use App\Models\DemandeAuditoire;
@@ -54,6 +55,7 @@ class AttributionNotificationTest extends TestCase
         ]);
 
         $ec = Ec::factory()->create();
+        AnneeAcademique::factory()->create(['active' => true]);
         $batiment = Batiment::factory()->create();
         $auditoire = Auditoire::factory()->create([
             'batiment_id' => $batiment->id,

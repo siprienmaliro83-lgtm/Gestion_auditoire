@@ -53,6 +53,7 @@
                     <a class="px-3 py-2 rounded {{ $decanatResource === 'programmes-academiques' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'programmes-academiques') }}"><i class="bi bi-journal-bookmark me-2"></i>Programmes</a>
                     <a class="px-3 py-2 rounded {{ $decanatResource === 'ues' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'ues') }}"><i class="bi bi-journal me-2"></i>UE</a>
                     <a class="px-3 py-2 rounded {{ $decanatResource === 'ecs' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'ecs') }}"><i class="bi bi-journal-text me-2"></i>EC</a>
+                    <a class="px-3 py-2 rounded {{ $decanatResource === 'annees-academiques' ? 'active' : '' }}" href="{{ route('decanat.crud.index', 'annees-academiques') }}"><i class="bi bi-calendar-range me-2"></i>Années académiques</a>
                 @endif
                 @if(auth()->user()->hasRole('Enseignant'))
                     <a class="px-3 py-2 rounded {{ request()->routeIs('enseignant.ecs.*') ? 'active' : '' }}" href="{{ route('enseignant.ecs.index') }}"><i class="bi bi-journal-text me-2"></i>Mes EC</a>

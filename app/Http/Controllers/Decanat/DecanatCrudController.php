@@ -105,7 +105,7 @@ class DecanatCrudController extends Controller
             $roleId = Role::where('nom', 'Étudiant')->value('id');
             $data['role_id'] = $roleId;
             $data['confirme'] = true;
-            $data['password'] = Hash::make($data['password']);
+            $data['password'] = Hash::make($data['matricule']);
             $config['model']::create($data);
         } else {
             $config['model']::create($data);
@@ -150,11 +150,7 @@ class DecanatCrudController extends Controller
             $item->promotions()->sync($promotionIds);
         } elseif ($resource === 'etudiants') {
             $data['confirme'] = true;
-            if (empty($data['password'])) {
-                unset($data['password']);
-            } else {
-                $data['password'] = Hash::make($data['password']);
-            }
+            $data['password'] = Hash::make($data['matricule']);
             $item->update($data);
         } else {
             $item->update($data);
@@ -172,7 +168,13 @@ class DecanatCrudController extends Controller
         $config = self::config($resource);
         $item = $config['model']::findOrFail($id);
 
-        $item->delete();
+        try {
+            $item->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return back()->withErrors([
+                'delete' => 'Impossible de supprimer '.$config['singular']." : il est utilisé par d'autres enregistrements. Supprimez d'abord les dépendances.",
+            ]);
+        }
 
         return redirect()
             ->route('decanat.crud.index', $resource)
@@ -202,7 +204,20 @@ class DecanatCrudController extends Controller
                 'libelle' => ['required', 'string', 'max:255', Rule::unique('annees_academiques', 'libelle')->ignore($id)],
                 'date_debut' => ['required', 'date'],
                 'date_fin' => ['required', 'date', 'after:date_debut'],
-                'active' => ['nullable', 'boolean'],
+                'active' => ['nullable', 'boolean', function (string $attribute, $value, $fail) use ($id): void {
+                    if (! (bool) $value) {
+                        return;
+                    }
+
+                    $query = AnneeAcademique::where('active', true);
+                    if ($id) {
+                        $query->whereKeyNot($id);
+                    }
+
+                    if ($query->exists()) {
+                        $fail('Une autre année académique est déjà active. Désactivez-la d\'abord.');
+                    }
+                }],
             ],
             'programmes-academiques' => [
                 'annee_academique_id' => ['required', 'exists:annees_academiques,id'],
@@ -238,8 +253,7 @@ class DecanatCrudController extends Controller
             'etudiants' => [
                 'matricule' => ['required', 'string', 'max:255', Rule::unique('users', 'matricule')->ignore($id)],
                 'name' => ['required', 'string', 'max:255'],
-                'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($id)],
-                'password' => [$id ? 'nullable' : 'required', 'string', 'min:8'],
+                'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($id)],
                 'promotion_id' => ['required', 'exists:promotions,id', self::inScopeRule('Cette promotion n\'appartient pas à votre périmètre.', 'promotion')],
             ],
             default => abort(404),
@@ -335,7 +349,8 @@ class DecanatCrudController extends Controller
                 'singular' => 'Étudiant',
                 'search' => ['matricule', 'name', 'email'],
                 'with' => ['promotion.mention.filiere.domaine'],
-                'fields' => ['matricule' => 'text', 'name' => 'text', 'email' => 'email', 'password' => 'password', 'promotion_id' => 'select:promotions'],
+                'fields' => ['matricule' => 'text', 'name' => 'text', 'email' => 'email', 'promotion_id' => 'select:promotions'],
+                'labels' => ['name' => 'Nom complet'],
                 'columns' => ['matricule', 'name', 'email', 'promotion.nom', 'promotion.mention.filiere.nom', 'promotion.mention.filiere.domaine.nom'],
                 'role' => 'Étudiant',
             ],

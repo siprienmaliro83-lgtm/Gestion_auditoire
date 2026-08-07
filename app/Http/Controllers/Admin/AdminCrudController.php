@@ -179,7 +179,20 @@ class AdminCrudController extends Controller
                 'libelle' => ['required', 'string', 'max:255', Rule::unique('annees_academiques', 'libelle')->ignore($id)],
                 'date_debut' => ['required', 'date'],
                 'date_fin' => ['required', 'date', 'after:date_debut'],
-                'active' => ['nullable', 'boolean'],
+                'active' => ['nullable', 'boolean', function (string $attribute, $value, $fail) use ($id): void {
+                    if (! (bool) $value) {
+                        return;
+                    }
+
+                    $query = AnneeAcademique::where('active', true);
+                    if ($id) {
+                        $query->whereKeyNot($id);
+                    }
+
+                    if ($query->exists()) {
+                        $fail('Une autre année académique est déjà active. Désactivez-la d\'abord.');
+                    }
+                }],
             ],
             'programmes-academiques' => [
                 'annee_academique_id' => ['required', 'exists:annees_academiques,id'],

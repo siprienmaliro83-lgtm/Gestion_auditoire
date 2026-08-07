@@ -4,10 +4,19 @@
 @section('page-title', 'Nouvelle demande d\'auditoire')
 
 @section('content')
+    @unless($anneeActive)
+        <div class="alert alert-warning">
+            <strong>Aucune année académique active.</strong>
+            Créez et activez une année académique avant de créer une demande d'auditoire.
+        </div>
+    @endunless
+
     <div class="card stat-card">
         <div class="card-body">
             <form method="POST" action="{{ route('decanat.demandes.store') }}" novalidate>
                 @csrf
+
+                @error('annee_academique')<div class="alert alert-danger">{{ $message }}</div>@enderror
 
                 <div class="row g-3">
                     <div class="col-md-6">

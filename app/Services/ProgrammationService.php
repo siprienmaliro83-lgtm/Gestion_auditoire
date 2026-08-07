@@ -41,6 +41,14 @@ class ProgrammationService
             ]);
         }
 
+        $anneeAcademique = AnneeAcademique::where('active', true)->first();
+
+        if (! $anneeAcademique) {
+            throw ValidationException::withMessages([
+                'annee_academique' => 'Aucune année académique active. Créez et activez une année académique avant de programmer un auditoire.',
+            ]);
+        }
+
         if ($auditoire->etat !== 'Disponible') {
             throw ValidationException::withMessages([
                 'auditoire_id' => 'Cet auditoire n\'est pas disponible ('.($auditoire->etat ?? 'état inconnu').').',
@@ -67,7 +75,7 @@ class ProgrammationService
 
         $programmation = Programmation::create([
             'demande_auditoire_id' => $demande->id,
-            'annee_academique_id' => AnneeAcademique::where('active', true)->value('id'),
+            'annee_academique_id' => $anneeAcademique->id,
             'ec_id' => $demande->ec_id,
             'enseignant_id' => $demande->enseignant_id,
             'auditoire_id' => $auditoire->id,

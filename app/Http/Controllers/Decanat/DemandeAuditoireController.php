@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Decanat;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Decanat\DemandeAuditoireRequest;
+use App\Models\AnneeAcademique;
 use App\Models\DemandeAuditoire;
 use App\Models\Ec;
 use App\Models\Enseignant;
@@ -48,6 +49,7 @@ class DemandeAuditoireController extends Controller
                 ->get(),
             'enseignants' => Enseignant::where('statut', 'Actif')->orderBy('nom')->orderBy('prenom')->get(),
             'promotions' => $promotions,
+            'anneeActive' => AnneeAcademique::where('active', true)->first(),
             'item' => new DemandeAuditoire(),
         ]);
     }
@@ -55,6 +57,13 @@ class DemandeAuditoireController extends Controller
     public function store(DemandeAuditoireRequest $request): RedirectResponse
     {
         $user = $request->user();
+
+        if (! AnneeAcademique::where('active', true)->exists()) {
+            return back()
+                ->withErrors(['annee_academique' => 'Aucune année académique active. Créez et activez une année académique avant de créer une demande.'])
+                ->withInput();
+        }
+
         $data = $request->validated();
 
         $allowedPromotionIds = Promotion::whereHas('mention.filiere.domaine', function ($query) use ($user) {

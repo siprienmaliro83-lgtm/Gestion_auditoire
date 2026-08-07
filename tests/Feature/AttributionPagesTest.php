@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AnneeAcademique;
 use App\Models\Auditoire;
 use App\Models\Batiment;
 use App\Models\DemandeAuditoire;
@@ -91,6 +92,7 @@ class AttributionPagesTest extends TestCase
     public function test_admin_cannot_assign_disponibility_conflict_auditoire(): void
     {
         $demande = $this->demande('Acceptée');
+        AnneeAcademique::factory()->create(['active' => true]);
         $batiment = Batiment::factory()->create();
         $auditoire = Auditoire::factory()->create([
             'batiment_id' => $batiment->id,

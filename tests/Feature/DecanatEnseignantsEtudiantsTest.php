@@ -141,7 +141,6 @@ class DecanatEnseignantsEtudiantsTest extends TestCase
             'matricule' => 'ETU-2025',
             'name' => 'Jean Kasongo',
             'email' => 'jean.kasongo@etudiant.universite.cd',
-            'password' => 'password123',
             'promotion_id' => $promotion->id,
         ]);
 
@@ -153,7 +152,53 @@ class DecanatEnseignantsEtudiantsTest extends TestCase
             'promotion_id' => $promotion->id,
             'confirme' => true,
         ]);
-        $this->assertNotSame('password123', User::where('matricule', 'ETU-2025')->value('password'));
+        $this->assertTrue(Hash::check('ETU-2025', User::where('matricule', 'ETU-2025')->value('password')));
+    }
+
+    public function test_decanat_can_create_student_without_email(): void
+    {
+        $domaine = Domaine::factory()->create();
+        $this->studentRole();
+        $promotion = $this->promotionIn($domaine);
+        $user = $this->decanatUser($domaine);
+
+        $response = $this->actingAs($user)->post('/decanat/etudiants', [
+            'matricule' => 'ETU-2026',
+            'name' => 'Marie Ilunga',
+            'email' => null,
+            'promotion_id' => $promotion->id,
+        ]);
+
+        $response->assertRedirect(route('decanat.crud.index', 'etudiants'));
+        $student = User::where('matricule', 'ETU-2026')->first();
+        $this->assertNotNull($student);
+        $this->assertNull($student->email);
+        $this->assertTrue(Hash::check('ETU-2026', $student->password));
+    }
+
+    public function test_student_created_by_decanat_can_login_with_name_and_matricule_password(): void
+    {
+        $domaine = Domaine::factory()->create();
+        $this->studentRole();
+        $promotion = $this->promotionIn($domaine);
+        $user = $this->decanatUser($domaine);
+
+        $this->actingAs($user)->post('/decanat/etudiants', [
+            'matricule' => 'ETU-2027',
+            'name' => 'Pauline Mbuyi',
+            'email' => null,
+            'promotion_id' => $promotion->id,
+        ]);
+
+        $this->post('/logout');
+
+        $response = $this->post('/login', [
+            'email' => 'Pauline Mbuyi',
+            'password' => 'ETU-2027',
+        ]);
+
+        $response->assertRedirect('/dashboard');
+        $this->assertAuthenticatedAs(User::where('matricule', 'ETU-2027')->first());
     }
 
     public function test_decanat_cannot_create_student_outside_his_domain(): void
@@ -168,7 +213,6 @@ class DecanatEnseignantsEtudiantsTest extends TestCase
             'matricule' => 'ETU-3000',
             'name' => 'Autre Étudiant',
             'email' => 'autre.etudiant@etudiant.universite.cd',
-            'password' => 'password123',
             'promotion_id' => $otherPromotion->id,
         ]);
 
