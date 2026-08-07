@@ -168,7 +168,7 @@ return new class extends Migration
             $table->timestamp('envoyee_a')->nullable();
             $table->timestamps();
 
-            $table->index(['statut', 'date_debut', 'heure_debut', 'heure_fin']);
+            $table->index(['statut', 'date_debut', 'heure_debut', 'heure_fin'], 'idx_demandes_auditoire_statut_dates');
         });
 
         Schema::create('programmations', function (Blueprint $table) {
@@ -188,8 +188,8 @@ return new class extends Migration
             $table->timestamp('validee_a')->nullable();
             $table->timestamps();
 
-            $table->index(['auditoire_id', 'date_debut', 'heure_debut', 'heure_fin', 'statut']);
-            $table->index(['enseignant_id', 'date_debut', 'heure_debut', 'heure_fin', 'statut']);
+            $table->index(['auditoire_id', 'date_debut', 'heure_debut', 'heure_fin', 'statut'], 'idx_programmations_auditoire_dates');
+            $table->index(['enseignant_id', 'date_debut', 'heure_debut', 'heure_fin', 'statut'], 'idx_programmations_enseignant_dates');
         });
 
         Schema::create('notifications', function (Blueprint $table) {

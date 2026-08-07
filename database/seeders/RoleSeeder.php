@@ -11,6 +11,7 @@ class RoleSeeder extends Seeder
     public function run(): void
     {
         $roles = [
+            'Super Administrateur' => 'Administration totale : validation des comptes, paramétrage global et statistiques.',
             'Administrateur' => 'Paramétrage global, utilisateurs, attributions et statistiques.',
             'Décanat' => 'Préparation des horaires et demandes d\'auditoires pour son domaine.',
             'Enseignant' => 'Consultation des EC et programmations attribués.',

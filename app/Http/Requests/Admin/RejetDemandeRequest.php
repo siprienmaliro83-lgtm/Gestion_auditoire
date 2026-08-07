@@ -8,7 +8,7 @@ class RejetDemandeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasRole('Administrateur') === true;
+        return $this->user()?->hasRole(['Administrateur', 'Super Administrateur']) === true;
     }
 
     public function rules(): array

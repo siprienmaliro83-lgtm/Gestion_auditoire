@@ -19,7 +19,7 @@ class DashboardController extends Controller
         $user = $request->user()->load('role', 'domaine', 'promotion.mention.filiere.domaine');
         $role = $user->role?->nom;
 
-        if ($role === 'Administrateur') {
+        if (in_array($role, ['Administrateur', 'Super Administrateur'], true)) {
             return $this->admin($user, $role);
         }
 

@@ -30,7 +30,7 @@
                 <a class="px-3 py-2 rounded {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                     <i class="bi bi-speedometer2 me-2"></i>Dashboard
                 </a>
-                @if(auth()->user()->hasRole('Administrateur'))
+                @if(auth()->user()->hasRole(['Administrateur', 'Super Administrateur']))
                     <a class="px-3 py-2 rounded {{ request()->routeIs('admin.comptes.*') ? 'active' : '' }}" href="{{ route('admin.comptes.index') }}"><i class="bi bi-person-check me-2"></i>Validation des comptes</a>
                     <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'users') }}"><i class="bi bi-people me-2"></i>Utilisateurs</a>
                     <a class="px-3 py-2 rounded" href="{{ route('admin.crud.index', 'domaines') }}"><i class="bi bi-diagram-3 me-2"></i>Domaines</a>

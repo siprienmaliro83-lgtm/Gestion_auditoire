@@ -13,7 +13,6 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $adminRoleId = Role::where('nom', 'Administrateur')->value('id');
         $decanatRoleId = Role::where('nom', 'Décanat')->value('id');
         $enseignantRoleId = Role::where('nom', 'Enseignant')->value('id');
         $etudiantRoleId = Role::where('nom', 'Étudiant')->value('id');
@@ -21,31 +20,35 @@ class UserSeeder extends Seeder
         $domaineST = Domaine::where('nom', 'Sciences et Technologies')->first();
         $domaineSEG = Domaine::where('nom', 'Sciences Économiques et de Gestion')->first();
 
-        User::create([
-            'role_id' => $adminRoleId,
-            'name' => 'Administrateur',
-            'email' => 'admin@universite.cd',
-            'password' => Hash::make('password'),
-            'confirme' => true,
-        ]);
+        // Le compte administrateur (admin@universite.cd) est créé par
+        // `SuperAdminSeeder` : on ne le recrée pas ici pour éviter tout doublon.
+        $decanatUsers = [
+            [
+                'role_id' => $decanatRoleId,
+                'name' => 'Decanat ST',
+                'email' => 'decanat@universite.cd',
+                'domaine_id' => $domaineST?->id,
+            ],
+            [
+                'role_id' => $decanatRoleId,
+                'name' => 'Decanat SEG',
+                'email' => 'decanat.seg@universite.cd',
+                'domaine_id' => $domaineSEG?->id,
+            ],
+        ];
 
-        User::create([
-            'role_id' => $decanatRoleId,
-            'name' => 'Decanat ST',
-            'email' => 'decanat@universite.cd',
-            'password' => Hash::make('password'),
-            'confirme' => true,
-            'domaine_id' => $domaineST?->id,
-        ]);
-
-        User::create([
-            'role_id' => $decanatRoleId,
-            'name' => 'Decanat SEG',
-            'email' => 'decanat.seg@universite.cd',
-            'password' => Hash::make('password'),
-            'confirme' => true,
-            'domaine_id' => $domaineSEG?->id,
-        ]);
+        foreach ($decanatUsers as $decanatUser) {
+            User::updateOrCreate(
+                ['email' => $decanatUser['email']],
+                [
+                    'role_id' => $decanatUser['role_id'],
+                    'name' => $decanatUser['name'],
+                    'password' => Hash::make('password'),
+                    'confirme' => true,
+                    'domaine_id' => $decanatUser['domaine_id'],
+                ],
+            );
+        }
 
         $promotions = Promotion::all();
 
@@ -56,13 +59,15 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($enseignants as $ens) {
-            User::create([
-                'role_id' => $enseignantRoleId,
-                'name' => $ens['name'],
-                'email' => $ens['email'],
-                'password' => Hash::make('password'),
-                'confirme' => true,
-            ]);
+            User::updateOrCreate(
+                ['email' => $ens['email']],
+                [
+                    'role_id' => $enseignantRoleId,
+                    'name' => $ens['name'],
+                    'password' => Hash::make('password'),
+                    'confirme' => true,
+                ],
+            );
         }
 
         $etudiants = [];
@@ -80,15 +85,19 @@ class UserSeeder extends Seeder
                         'Isabelle', 'Jules', 'Karine', 'Louis', 'Monique', 'Nathan', 'Olivia',
                         'Patrick', 'Quentin', 'Rachel', 'Samuel', 'Thérèse'][$i];
 
-            $etudiants[] = User::create([
-                'role_id' => $etudiantRoleId,
-                'name' => $prenom . ' ' . $noms[$i],
-                'email' => strtolower($prenom) . '.' . strtolower($noms[$i]) . '@etudiant.universite.cd',
-                'matricule' => sprintf('ETU-%04d', $i + 1),
-                'password' => Hash::make('password'),
-                'confirme' => true,
-                'promotion_id' => $promoId,
-            ]);
+            $email = strtolower($prenom) . '.' . strtolower($noms[$i]) . '@etudiant.universite.cd';
+
+            $etudiants[] = User::updateOrCreate(
+                ['email' => $email],
+                [
+                    'role_id' => $etudiantRoleId,
+                    'name' => $prenom . ' ' . $noms[$i],
+                    'matricule' => sprintf('ETU-%04d', $i + 1),
+                    'password' => Hash::make('password'),
+                    'confirme' => true,
+                    'promotion_id' => $promoId,
+                ],
+            );
         }
     }
 }

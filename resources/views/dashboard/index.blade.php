@@ -8,7 +8,7 @@
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 
-@if($role === 'Administrateur')
+@if(in_array($role, ['Administrateur', 'Super Administrateur'], true))
     <div class="row g-3 mb-4">
         @foreach([
             ['Domaines', $stats['domaines'] ?? 0, 'bi-diagram-3', 'primary'],

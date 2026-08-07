@@ -39,7 +39,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    Route::prefix('admin')->name('admin.')->middleware('role:Administrateur')->group(function (): void {
+    Route::prefix('admin')->name('admin.')->middleware('role:Administrateur,Super Administrateur')->group(function (): void {
         Route::get('/', DashboardController::class)->name('index');
         Route::get('/comptes', [\App\Http\Controllers\Admin\ComptesController::class, 'index'])->name('comptes.index');
         Route::post('/comptes/{user}/approuver', [\App\Http\Controllers\Admin\ComptesController::class, 'approuver'])->name('comptes.approuver');

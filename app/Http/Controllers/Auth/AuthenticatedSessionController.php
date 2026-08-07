@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -26,10 +27,16 @@ class AuthenticatedSessionController extends Controller
         // L'identifiant peut être un e-mail (tous les rôles), un matricule
         // ou un nom (étudiants). On résout d'abord l'utilisateur, puis on
         // vérifie le mot de passe, quel que soit le mode de connexion.
-        $user = User::where('email', $identifier)
-            ->orWhere('matricule', $identifier)
-            ->orWhere('name', $identifier)
-            ->first();
+        // La colonne `matricule` n'existe que si la migration dédiée a été
+        // appliquée : on la garde donc conditionnelle pour ne pas planter sur
+        // une base dont le schéma n'est pas encore à jour.
+        $query = User::where('email', $identifier);
+
+        if (Schema::hasColumn('users', 'matricule')) {
+            $query->orWhere('matricule', $identifier);
+        }
+
+        $user = $query->orWhere('name', $identifier)->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {
             return back()
