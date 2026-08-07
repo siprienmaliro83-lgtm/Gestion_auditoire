@@ -52,24 +52,14 @@
                         @error('domaine_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="filiere_id">Filière</label>
-                        <select class="form-select @error('filiere_id') is-invalid @enderror" id="filiere_id" name="filiere_id" disabled>
-                            <option value="">Sélectionner une Filière</option>
-                            @foreach($filieres as $filiere)
-                                <option value="{{ $filiere->id }}" @selected(old('filiere_id') == $filiere->id)>{{ trim($filiere->code.' '.$filiere->nom) }}</option>
-                            @endforeach
-                        </select>
-                        @error('filiere_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <label class="form-label" for="filiere_nom">Filière</label>
+                        <input class="form-control @error('filiere_nom') is-invalid @enderror" id="filiere_nom" name="filiere_nom" type="text" value="{{ old('filiere_nom') }}" placeholder="Ex. : Génie Informatique">
+                        @error('filiere_nom')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-0">
-                        <label class="form-label" for="mention_id">Mention</label>
-                        <select class="form-select @error('mention_id') is-invalid @enderror" id="mention_id" name="mention_id" disabled>
-                            <option value="">Sélectionner une Mention</option>
-                            @foreach($mentions as $mention)
-                                <option value="{{ $mention->id }}" @selected(old('mention_id') == $mention->id)>{{ trim($mention->code.' '.$mention->nom) }}</option>
-                            @endforeach
-                        </select>
-                        @error('mention_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <label class="form-label" for="mention_nom">Mention</label>
+                        <input class="form-control @error('mention_nom') is-invalid @enderror" id="mention_nom" name="mention_nom" type="text" value="{{ old('mention_nom') }}" placeholder="Ex. : Informatique">
+                        @error('mention_nom')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                 </div>
 
@@ -101,85 +91,23 @@
         const roleSelect = document.getElementById('role_id');
         const fields = document.getElementById('decanat-fields');
         const domaineSelect = document.getElementById('domaine_id');
-        const filiereSelect = document.getElementById('filiere_id');
-        const mentionSelect = document.getElementById('mention_id');
-
-        const emptyOption = (label) => { const o = document.createElement('option'); o.value = ''; o.textContent = label; return o; };
-
-        function setRequired(select, required) {
-            select.required = required;
-            if (!required) select.value = '';
-        }
+        const filiereInput = document.getElementById('filiere_nom');
+        const mentionInput = document.getElementById('mention_nom');
 
         function toggleDecanatFields() {
             const isDecanat = Number(roleSelect.value) === Number(decanatRoleId);
             fields.classList.toggle('d-none', !isDecanat);
-            filiereSelect.disabled = !isDecanat;
-            mentionSelect.disabled = !isDecanat;
-            setRequired(domaineSelect, isDecanat);
-            setRequired(filiereSelect, isDecanat);
-            setRequired(mentionSelect, isDecanat);
+            domaineSelect.required = isDecanat;
+            filiereInput.required = isDecanat;
+            mentionInput.required = isDecanat;
             if (!isDecanat) {
                 domaineSelect.value = '';
-                filiereSelect.innerHTML = '';
-                filiereSelect.appendChild(emptyOption('Sélectionner une Filière'));
-                mentionSelect.innerHTML = '';
-                mentionSelect.appendChild(emptyOption('Sélectionner une Mention'));
-            }
-        }
-
-        async function loadFilieres() {
-            filiereSelect.innerHTML = '';
-            filiereSelect.appendChild(emptyOption('Sélectionner une Filière'));
-            mentionSelect.innerHTML = '';
-            mentionSelect.appendChild(emptyOption('Sélectionner une Mention'));
-            mentionSelect.disabled = true;
-            if (!domaineSelect.value) {
-                filiereSelect.disabled = true;
-                return;
-            }
-            filiereSelect.disabled = true;
-            try {
-                const res = await fetch('/api/filieres?domaine_id=' + encodeURIComponent(domaineSelect.value));
-                const filieres = await res.json();
-                filiereSelect.disabled = false;
-                filieres.forEach(f => {
-                    const o = document.createElement('option');
-                    o.value = f.id;
-                    o.textContent = (f.code ? f.code + ' ' : '') + f.nom;
-                    filiereSelect.appendChild(o);
-                });
-            } catch (e) {
-                filiereSelect.disabled = false;
-            }
-        }
-
-        async function loadMentions() {
-            mentionSelect.innerHTML = '';
-            mentionSelect.appendChild(emptyOption('Sélectionner une Mention'));
-            if (!filiereSelect.value) {
-                mentionSelect.disabled = true;
-                return;
-            }
-            mentionSelect.disabled = true;
-            try {
-                const res = await fetch('/api/mentions?filiere_id=' + encodeURIComponent(filiereSelect.value));
-                const mentions = await res.json();
-                mentionSelect.disabled = false;
-                mentions.forEach(m => {
-                    const o = document.createElement('option');
-                    o.value = m.id;
-                    o.textContent = (m.code ? m.code + ' ' : '') + m.nom;
-                    mentionSelect.appendChild(o);
-                });
-            } catch (e) {
-                mentionSelect.disabled = false;
+                filiereInput.value = '';
+                mentionInput.value = '';
             }
         }
 
         roleSelect.addEventListener('change', toggleDecanatFields);
-        domaineSelect.addEventListener('change', loadFilieres);
-        filiereSelect.addEventListener('change', loadMentions);
 
         toggleDecanatFields();
     })();

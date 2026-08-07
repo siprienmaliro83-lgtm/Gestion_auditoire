@@ -40,8 +40,6 @@ class AccountRequestTest extends TestCase
     {
         $decanatRole = Role::factory()->create(['nom' => 'Décanat']);
         $domaine = Domaine::factory()->create(['nom' => 'Sciences et Technologies']);
-        $filiere = Filiere::factory()->create(['domaine_id' => $domaine->id]);
-        $mention = Mention::factory()->create(['filiere_id' => $filiere->id]);
 
         $response = $this->from('/demander-compte')->post('/demander-compte', [
             'name' => 'Décanat Sciences',
@@ -50,11 +48,17 @@ class AccountRequestTest extends TestCase
             'password_confirmation' => 'password123',
             'role_id' => $decanatRole->id,
             'domaine_id' => $domaine->id,
-            'filiere_id' => $filiere->id,
-            'mention_id' => $mention->id,
+            'filiere_nom' => 'Génie Informatique',
+            'mention_nom' => 'Informatique',
         ]);
 
         $response->assertRedirect(route('login'));
+
+        $filiere = Filiere::where('domaine_id', $domaine->id)->where('nom', 'Génie Informatique')->first();
+        $this->assertNotNull($filiere);
+        $mention = Mention::where('filiere_id', $filiere->id)->where('nom', 'Informatique')->first();
+        $this->assertNotNull($mention);
+
         $this->assertDatabaseHas('users', [
             'email' => 'decanat.sciences@universite.cd',
             'role_id' => $decanatRole->id,
@@ -65,50 +69,90 @@ class AccountRequestTest extends TestCase
         ]);
     }
 
-    public function test_decanat_account_request_rejects_filiere_outside_domaine(): void
-    {
-        $decanatRole = Role::factory()->create(['nom' => 'Décanat']);
-        $domaineA = Domaine::factory()->create();
-        $domaineB = Domaine::factory()->create();
-        $filiereOfB = Filiere::factory()->create(['domaine_id' => $domaineB->id]);
-        $mention = Mention::factory()->create(['filiere_id' => $filiereOfB->id]);
-
-        $response = $this->from('/demander-compte')->post('/demander-compte', [
-            'name' => 'Décanat X',
-            'email' => 'decanat.x@universite.cd',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-            'role_id' => $decanatRole->id,
-            'domaine_id' => $domaineA->id,
-            'filiere_id' => $filiereOfB->id,
-            'mention_id' => $mention->id,
-        ]);
-
-        $response->assertSessionHasErrors('filiere_id');
-        $this->assertDatabaseMissing('users', ['email' => 'decanat.x@universite.cd']);
-    }
-
-    public function test_decanat_account_request_rejects_mention_outside_filiere(): void
+    public function test_decanat_account_request_reuses_existing_filiere_and_mention(): void
     {
         $decanatRole = Role::factory()->create(['nom' => 'Décanat']);
         $domaine = Domaine::factory()->create();
-        $filiere = Filiere::factory()->create(['domaine_id' => $domaine->id]);
-        $otherFiliere = Filiere::factory()->create(['domaine_id' => $domaine->id]);
-        $mentionOfOther = Mention::factory()->create(['filiere_id' => $otherFiliere->id]);
+        $filiere = Filiere::factory()->create(['domaine_id' => $domaine->id, 'nom' => 'Génie Informatique']);
+        $mention = Mention::factory()->create(['filiere_id' => $filiere->id, 'nom' => 'Informatique']);
 
-        $response = $this->from('/demander-compte')->post('/demander-compte', [
-            'name' => 'Décanat Y',
-            'email' => 'decanat.y@universite.cd',
+        $this->from('/demander-compte')->post('/demander-compte', [
+            'name' => 'Décanat Reuse',
+            'email' => 'decanat.reuse@universite.cd',
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'role_id' => $decanatRole->id,
             'domaine_id' => $domaine->id,
+            'filiere_nom' => 'Génie Informatique',
+            'mention_nom' => 'Informatique',
+        ])->assertRedirect(route('login'));
+
+        $this->assertDatabaseCount('filieres', 1);
+        $this->assertDatabaseCount('mentions', 1);
+        $this->assertDatabaseHas('users', [
+            'email' => 'decanat.reuse@universite.cd',
             'filiere_id' => $filiere->id,
-            'mention_id' => $mentionOfOther->id,
+            'mention_id' => $mention->id,
+        ]);
+    }
+
+    public function test_decanat_account_request_requires_domaine(): void
+    {
+        $decanatRole = Role::factory()->create(['nom' => 'Décanat']);
+
+        $response = $this->from('/demander-compte')->post('/demander-compte', [
+            'name' => 'Décanat Sans Domaine',
+            'email' => 'decanat.sansdomaine@universite.cd',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role_id' => $decanatRole->id,
+            'domaine_id' => '',
+            'filiere_nom' => 'Génie Informatique',
+            'mention_nom' => 'Informatique',
         ]);
 
-        $response->assertSessionHasErrors('mention_id');
-        $this->assertDatabaseMissing('users', ['email' => 'decanat.y@universite.cd']);
+        $response->assertSessionHasErrors('domaine_id');
+        $this->assertDatabaseMissing('users', ['email' => 'decanat.sansdomaine@universite.cd']);
+    }
+
+    public function test_decanat_account_request_requires_filiere(): void
+    {
+        $decanatRole = Role::factory()->create(['nom' => 'Décanat']);
+        $domaine = Domaine::factory()->create();
+
+        $response = $this->from('/demander-compte')->post('/demander-compte', [
+            'name' => 'Décanat Sans Filière',
+            'email' => 'decanat.sansfiliere@universite.cd',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role_id' => $decanatRole->id,
+            'domaine_id' => $domaine->id,
+            'filiere_nom' => '',
+            'mention_nom' => 'Informatique',
+        ]);
+
+        $response->assertSessionHasErrors('filiere_nom');
+        $this->assertDatabaseMissing('users', ['email' => 'decanat.sansfiliere@universite.cd']);
+    }
+
+    public function test_decanat_account_request_requires_mention(): void
+    {
+        $decanatRole = Role::factory()->create(['nom' => 'Décanat']);
+        $domaine = Domaine::factory()->create();
+
+        $response = $this->from('/demander-compte')->post('/demander-compte', [
+            'name' => 'Décanat Sans Mention',
+            'email' => 'decanat.sansmention@universite.cd',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role_id' => $decanatRole->id,
+            'domaine_id' => $domaine->id,
+            'filiere_nom' => 'Génie Informatique',
+            'mention_nom' => '',
+        ]);
+
+        $response->assertSessionHasErrors('mention_nom');
+        $this->assertDatabaseMissing('users', ['email' => 'decanat.sansmention@universite.cd']);
     }
 
     public function test_admin_account_request_does_not_require_domain(): void

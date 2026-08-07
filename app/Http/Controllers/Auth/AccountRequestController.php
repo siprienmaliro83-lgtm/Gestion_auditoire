@@ -10,21 +10,18 @@ use App\Models\Mention;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AccountRequestController extends Controller
 {
     public function create(): View
     {
-        $domaineId = old('domaine_id') ? (int) old('domaine_id') : null;
-        $filiereId = old('filiere_id') ? (int) old('filiere_id') : null;
-
         return view('auth.account-request', [
             'roles' => Role::whereIn('nom', ['Décanat', 'Administrateur'])->orderBy('nom')->get(),
             'domaines' => Domaine::orderBy('nom')->get(),
-            'filieres' => $domaineId ? Filiere::where('domaine_id', $domaineId)->orderBy('nom')->get() : collect(),
-            'mentions' => $filiereId ? Mention::where('filiere_id', $filiereId)->orderBy('nom')->get() : collect(),
         ]);
     }
 
@@ -32,19 +29,60 @@ class AccountRequestController extends Controller
     {
         $data = $request->validated();
 
-        User::create([
+        $userData = [
             'role_id' => $data['role_id'],
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'confirme' => false,
-            'domaine_id' => $request->isDecanatRequest() ? $data['domaine_id'] : null,
-            'filiere_id' => $request->isDecanatRequest() ? $data['filiere_id'] : null,
-            'mention_id' => $request->isDecanatRequest() ? $data['mention_id'] : null,
-        ]);
+        ];
+
+        if ($request->isDecanatRequest()) {
+            $userData += $this->resolveDecanatScope($data);
+        }
+
+        User::create($userData);
 
         return redirect()
             ->route('login')
             ->with('success', 'Votre demande de compte a été soumise. Elle sera validée par le Super Administrateur.');
+    }
+
+    private function resolveDecanatScope(array $data): array
+    {
+        return DB::transaction(function () use ($data) {
+            $domaineId = (int) $data['domaine_id'];
+
+            $filiere = Filiere::firstOrCreate(
+                ['domaine_id' => $domaineId, 'nom' => trim($data['filiere_nom'])],
+                ['code' => $this->uniqueCode('filieres', $data['filiere_nom'])],
+            );
+
+            $mention = Mention::firstOrCreate(
+                ['filiere_id' => $filiere->id, 'nom' => trim($data['mention_nom'])],
+                ['code' => $this->uniqueCode('mentions', $data['mention_nom'])],
+            );
+
+            return [
+                'domaine_id' => $domaineId,
+                'filiere_id' => $filiere->id,
+                'mention_id' => $mention->id,
+            ];
+        });
+    }
+
+    private function uniqueCode(string $table, string $nom): string
+    {
+        $base = strtoupper(Str::slug($nom, '_'));
+        $base = $base === '' ? 'AUTO' : $base;
+
+        $code = $base;
+        $i = 1;
+
+        while (DB::table($table)->where('code', $code)->exists()) {
+            $code = $base.'_'.(++$i);
+        }
+
+        return $code;
     }
 }

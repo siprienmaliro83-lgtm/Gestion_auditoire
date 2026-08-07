@@ -2,8 +2,6 @@
 
 namespace App\Http\Requests\Auth;
 
-use App\Models\Filiere;
-use App\Models\Mention;
 use App\Models\Role;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,37 +29,16 @@ class AccountRequestRequest extends FormRequest
                 },
             ],
             'domaine_id' => ['nullable', 'exists:domaines,id'],
-            'filiere_id' => ['nullable', 'exists:filieres,id'],
-            'mention_id' => ['nullable', 'exists:mentions,id'],
+            'filiere_nom' => ['nullable', 'string', 'max:255'],
+            'mention_nom' => ['nullable', 'string', 'max:255'],
         ];
 
         $decanatRole = Role::where('nom', 'Décanat')->first();
 
         if ($decanatRole !== null && (int) $this->input('role_id') === $decanatRole->id) {
-            $domaineId = (int) $this->input('domaine_id');
-            $filiereId = (int) $this->input('filiere_id');
-
             $rules['domaine_id'] = ['required', 'exists:domaines,id'];
-
-            $rules['filiere_id'] = [
-                'required',
-                'exists:filieres,id',
-                function (string $attribute, $value, $fail) use ($domaineId): void {
-                    if (! Filiere::whereKey($value)->where('domaine_id', $domaineId)->exists()) {
-                        $fail('La filière choisie n\'appartient pas au domaine sélectionné.');
-                    }
-                },
-            ];
-
-            $rules['mention_id'] = [
-                'required',
-                'exists:mentions,id',
-                function (string $attribute, $value, $fail) use ($filiereId): void {
-                    if (! Mention::whereKey($value)->where('filiere_id', $filiereId)->exists()) {
-                        $fail('La mention choisie n\'appartient pas à la filière sélectionnée.');
-                    }
-                },
-            ];
+            $rules['filiere_nom'] = ['required', 'string', 'max:255'];
+            $rules['mention_nom'] = ['required', 'string', 'max:255'];
         }
 
         return $rules;
@@ -72,8 +49,8 @@ class AccountRequestRequest extends FormRequest
         return [
             'role_id.required' => 'Sélectionnez le type de compte demandé.',
             'domaine_id.required' => 'Sélectionnez un Domaine.',
-            'filiere_id.required' => 'Sélectionnez une Filière.',
-            'mention_id.required' => 'Sélectionnez une Mention.',
+            'filiere_nom.required' => 'Renseignez la Filière.',
+            'mention_nom.required' => 'Renseignez la Mention.',
         ];
     }
 
