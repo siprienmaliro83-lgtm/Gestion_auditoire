@@ -33,11 +33,11 @@
                             @if($type === 'checkbox')
                                 <div class="form-check mt-4">
                                     <input class="form-check-input @error($name) is-invalid @enderror" id="{{ $name }}" name="{{ $name }}" type="checkbox" value="1" @checked(old($name, $item->{$name}))>
-                                    <label class="form-check-label" for="{{ $name }}">{{ ucfirst(str_replace('_', ' ', $name)) }}</label>
+                                    <label class="form-check-label" for="{{ $name }}">{{ $config['labels'][$name] ?? ucfirst(str_replace('_', ' ', $name)) }}</label>
                                     @error($name)<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                                 </div>
                             @else
-                                <label class="form-label" for="{{ $name }}">{{ ucfirst(str_replace('_', ' ', $name)) }}</label>
+                                <label class="form-label" for="{{ $name }}">{{ $config['labels'][$name] ?? ucfirst(str_replace('_', ' ', $name)) }}</label>
 
                                 @if($type === 'textarea')
                                     <textarea class="form-control @error($name) is-invalid @enderror" id="{{ $name }}" name="{{ $name }}" rows="3">{{ $value }}</textarea>
@@ -70,25 +70,6 @@
                         </div>
                     @endforeach
                 </div>
-
-                @if($resource === 'enseignants' && isset($ecs))
-                    <div class="row g-3 mt-2">
-                        <div class="col-12">
-                            <label class="form-label">EC assignés</label>
-                            <select class="form-select @error('ec_ids') is-invalid @enderror" id="ec_ids" name="ec_ids[]" multiple size="8">
-                                @foreach($ecs as $ec)
-                                    @php
-                                        $ecSelected = $enseignant && $enseignant->ecs->contains($ec->id);
-                                    @endphp
-                                    <option value="{{ $ec->id }}" @selected($ecSelected)>
-                                        {{ $ec->code }} - {{ $ec->nom }} ({{ $ec->ue?->nom ?? 'Sans UE' }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('ec_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        </div>
-                    </div>
-                @endif
 
                 <div class="d-flex justify-content-end gap-2 mt-4">
                     <a class="btn btn-outline-secondary" href="{{ route('decanat.crud.index', $resource) }}">Annuler</a>

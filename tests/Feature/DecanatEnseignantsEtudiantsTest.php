@@ -51,28 +51,66 @@ class DecanatEnseignantsEtudiantsTest extends TestCase
         }
     }
 
-    public function test_decanat_can_create_enseignant_with_domaine_and_statut(): void
+    public function test_decanat_can_create_enseignant_and_his_login_account(): void
     {
         $domaine = Domaine::factory()->create();
         $user = $this->decanatUser($domaine);
+        $enseignantRole = Role::firstOrCreate(['nom' => 'Enseignant']);
 
         $response = $this->actingAs($user)->post('/decanat/enseignants', [
             'matricule' => 'ENS-1001',
-            'nom' => 'Dupont',
-            'prenom' => 'Jean',
+            'nom' => 'Dupont Jean',
             'email' => 'jean.dupont@universite.cd',
             'telephone' => '+243900000000',
             'grade' => 'Professeur',
-            'domaine_id' => $domaine->id,
+            'specialite' => 'Réseaux',
             'statut' => 'Actif',
         ]);
 
         $response->assertRedirect(route('decanat.crud.index', 'enseignants'));
         $this->assertDatabaseHas('enseignants', [
             'matricule' => 'ENS-1001',
-            'domaine_id' => $domaine->id,
+            'nom' => 'Dupont Jean',
+            'email' => 'jean.dupont@universite.cd',
+            'grade' => 'Professeur',
+            'specialite' => 'Réseaux',
             'statut' => 'Actif',
         ]);
+
+        $enseignant = Enseignant::where('matricule', 'ENS-1001')->first();
+        $this->assertNotNull($enseignant->user_id);
+        $this->assertDatabaseHas('users', [
+            'id' => $enseignant->user_id,
+            'name' => 'Dupont Jean',
+            'email' => 'jean.dupont@universite.cd',
+            'role_id' => $enseignantRole->id,
+            'confirme' => true,
+        ]);
+
+        $userAccount = User::find($enseignant->user_id);
+        $this->assertTrue(Hash::check('ENS-1001', $userAccount->password));
+    }
+
+    public function test_decanat_cannot_create_enseignant_with_duplicate_email(): void
+    {
+        $domaine = Domaine::factory()->create();
+        $user = $this->decanatUser($domaine);
+
+        Enseignant::factory()->create([
+            'matricule' => 'ENS-EXISTANT',
+            'email' => 'dupont.jean@universite.cd',
+        ]);
+
+        $response = $this->actingAs($user)->from('/decanat/enseignants/create')->post('/decanat/enseignants', [
+            'matricule' => 'ENS-NOUVEAU',
+            'nom' => 'Dupont Jean',
+            'email' => 'dupont.jean@universite.cd',
+            'grade' => 'Professeur',
+            'statut' => 'Actif',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertDatabaseMissing('enseignants', ['matricule' => 'ENS-NOUVEAU']);
     }
 
     public function test_enseignant_list_is_universal_across_decanats(): void
@@ -232,18 +270,40 @@ class DecanatEnseignantsEtudiantsTest extends TestCase
         $this->assertAuthenticatedAs($student);
     }
 
-    public function test_teacher_can_login_with_email(): void
+    public function test_teacher_can_login_with_email_and_matricule_password(): void
     {
+        $teacherRole = Role::factory()->create(['nom' => 'Enseignant']);
         $teacher = User::factory()->create([
-            'role_id' => Role::factory()->create(['nom' => 'Enseignant'])->id,
-            'email' => 'enseignant.login@universite.cd',
-            'password' => Hash::make('password'),
+            'role_id' => $teacherRole->id,
+            'name' => 'Mukendi Paul',
+            'email' => 'paul.mukendi@universite.cd',
+            'password' => Hash::make('ENS-2025'),
             'confirme' => true,
         ]);
 
         $response = $this->post('/login', [
-            'email' => 'enseignant.login@universite.cd',
-            'password' => 'password',
+            'email' => 'paul.mukendi@universite.cd',
+            'password' => 'ENS-2025',
+        ]);
+
+        $response->assertRedirect('/dashboard');
+        $this->assertAuthenticatedAs($teacher);
+    }
+
+    public function test_teacher_can_login_with_full_name_and_matricule_password(): void
+    {
+        $teacherRole = Role::factory()->create(['nom' => 'Enseignant']);
+        $teacher = User::factory()->create([
+            'role_id' => $teacherRole->id,
+            'name' => 'Mukendi Paul',
+            'email' => 'paul.mukendi@universite.cd',
+            'password' => Hash::make('ENS-2025'),
+            'confirme' => true,
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => 'Mukendi Paul',
+            'password' => 'ENS-2025',
         ]);
 
         $response->assertRedirect('/dashboard');

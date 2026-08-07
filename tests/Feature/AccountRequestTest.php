@@ -319,7 +319,7 @@ class AccountRequestTest extends TestCase
         $this->actingAs($decanat)->get('/admin/comptes')->assertForbidden();
     }
 
-    public function test_decanat_reuses_existing_teacher_by_email(): void
+    public function test_decanat_cannot_reuse_existing_teacher_email(): void
     {
         $domaine = Domaine::factory()->create();
         $decanatRole = Role::factory()->create(['nom' => 'Décanat']);
@@ -330,7 +330,7 @@ class AccountRequestTest extends TestCase
             'confirme' => true,
         ]);
 
-        $existing = Enseignant::factory()->create([
+        Enseignant::factory()->create([
             'matricule' => 'ENS-EXISTANT',
             'nom' => 'Dupont',
             'prenom' => 'Jean',
@@ -338,7 +338,7 @@ class AccountRequestTest extends TestCase
             'statut' => 'Actif',
         ]);
 
-        $response = $this->actingAs($decanat)->post('/decanat/enseignants', [
+        $response = $this->actingAs($decanat)->from('/decanat/enseignants/create')->post('/decanat/enseignants', [
             'matricule' => 'ENS-NOUVEAU',
             'nom' => 'Dupont',
             'prenom' => 'Jean',
@@ -347,14 +347,7 @@ class AccountRequestTest extends TestCase
             'statut' => 'Actif',
         ]);
 
-        $response->assertRedirect(route('decanat.crud.index', 'enseignants'));
-
-        $this->assertDatabaseCount('enseignants', 1);
-        $this->assertDatabaseHas('enseignants', [
-            'id' => $existing->id,
-            'email' => 'dupont.jean@universite.cd',
-            'grade' => 'Professeur',
-        ]);
+        $response->assertSessionHasErrors('email');
         $this->assertDatabaseMissing('enseignants', ['matricule' => 'ENS-NOUVEAU']);
     }
 }

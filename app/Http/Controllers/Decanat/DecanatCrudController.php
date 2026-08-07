@@ -80,8 +80,6 @@ class DecanatCrudController extends Controller
             'config' => $config,
             'item' => new $config['model'](),
             'options' => $this->options($config, $resource),
-            'ecs' => $resource === 'enseignants' ? $this->domainEcs() : null,
-            'enseignant' => null,
         ]);
     }
 
@@ -93,28 +91,9 @@ class DecanatCrudController extends Controller
         $data = $this->payload($request->validated(), $config);
 
         if ($resource === 'enseignants') {
-            $ecIds = $request->input('ec_ids', []);
-            unset($data['ec_ids']);
-
-            // Un enseignant est unique dans toute l'université : on le
-            // réutilise s'il existe déjà une fiche avec la même adresse e-mail.
-            $existing = Enseignant::where('email', $data['email'] ?? null)->first();
-            if ($existing) {
-                $existing->update(Arr::except($data, ['matricule', 'email']));
-                if (! empty($ecIds)) {
-                    $existing->ecs()->syncWithoutDetaching($ecIds);
-                }
-
-                return redirect()
-                    ->route('decanat.crud.index', $resource)
-                    ->with('success', 'Enseignant déjà enregistré — sa fiche a été réutilisée.');
-            }
-
             $data['statut'] = $data['statut'] ?? 'Actif';
             $enseignant = $config['model']::create($data);
-            if (! empty($ecIds)) {
-                $enseignant->ecs()->attach($ecIds);
-            }
+            $this->syncEnseignantUser($enseignant);
         } elseif ($resource === 'programmes-academiques') {
             $promotionIds = $request->input('promotions', []);
             unset($data['promotions']);
@@ -144,20 +123,11 @@ class DecanatCrudController extends Controller
         $config = self::config($resource);
         $item = $config['model']::findOrFail($id);
 
-        $ecs = null;
-        $enseignant = null;
-        if ($resource === 'enseignants') {
-            $ecs = $this->domainEcs();
-            $enseignant = $item;
-        }
-
         return view('decanat.crud.form', [
             'resource' => $resource,
             'config' => $config,
             'item' => $item,
             'options' => $this->options($config, $resource),
-            'ecs' => $ecs,
-            'enseignant' => $enseignant,
         ]);
     }
 
@@ -170,11 +140,9 @@ class DecanatCrudController extends Controller
         $data = $this->payload($request->validated(), $config, $item);
 
         if ($resource === 'enseignants') {
-            $ecIds = $request->input('ec_ids', []);
-            unset($data['ec_ids']);
             $data['statut'] = $data['statut'] ?? 'Actif';
             $item->update($data);
-            $item->ecs()->sync($ecIds);
+            $this->syncEnseignantUser($item);
         } elseif ($resource === 'programmes-academiques') {
             $promotionIds = $request->input('promotions', []);
             unset($data['promotions']);
@@ -259,20 +227,13 @@ class DecanatCrudController extends Controller
                 'statut' => ['required', Rule::in(['Non commencé', 'En cours', 'Entièrement dispensé'])],
             ],
             'enseignants' => [
-                'user_id' => ['nullable', 'exists:users,id'],
                 'matricule' => ['required', 'string', 'max:255', Rule::unique('enseignants', 'matricule')->ignore($id)],
                 'nom' => ['required', 'string', 'max:255'],
-                'prenom' => ['nullable', 'string', 'max:255'],
-                // Pas d'unicité sur l'e-mail : un enseignant existant avec la même
-                // adresse est réutilisé au lieu de créer un doublon.
-                'email' => ['required', 'email', 'max:255'],
+                'email' => ['required', 'email', 'max:255', Rule::unique('enseignants', 'email')->ignore($id)],
                 'telephone' => ['nullable', 'string', 'max:255'],
                 'grade' => ['nullable', 'string', 'max:255'],
                 'specialite' => ['nullable', 'string', 'max:255'],
-                'domaine_id' => ['nullable', 'exists:domaines,id'],
                 'statut' => ['nullable', Rule::in(['Actif', 'Inactif'])],
-                'ec_ids' => ['nullable', 'array'],
-                'ec_ids.*' => ['exists:ecs,id'],
             ],
             'etudiants' => [
                 'matricule' => ['required', 'string', 'max:255', Rule::unique('users', 'matricule')->ignore($id)],
@@ -362,10 +323,11 @@ class DecanatCrudController extends Controller
                 'model' => Enseignant::class,
                 'title' => 'Enseignants',
                 'singular' => 'Enseignant',
-                'search' => ['matricule', 'nom', 'prenom', 'email', 'specialite'],
-                'with' => ['user', 'ecs', 'domaine'],
-                'fields' => ['matricule' => 'text', 'nom' => 'text', 'prenom' => 'text', 'email' => 'email', 'telephone' => 'text', 'grade' => 'text', 'specialite' => 'text', 'domaine_id' => 'select:domaines', 'statut' => 'enum:Actif,Inactif'],
-                'columns' => ['matricule', 'nom', 'prenom', 'email', 'grade', 'specialite', 'statut'],
+                'search' => ['matricule', 'nom', 'email', 'specialite'],
+                'with' => ['user'],
+                'labels' => ['nom' => 'Nom complet'],
+                'fields' => ['matricule' => 'text', 'nom' => 'text', 'email' => 'email', 'telephone' => 'text', 'grade' => 'text', 'specialite' => 'text', 'statut' => 'enum:Actif,Inactif'],
+                'columns' => ['matricule', 'nom', 'email', 'grade', 'specialite', 'statut'],
             ],
             'etudiants' => [
                 'model' => User::class,
@@ -538,15 +500,37 @@ class DecanatCrudController extends Controller
         return $options;
     }
 
-    private function domainEcs(): \Illuminate\Database\Eloquent\Collection
+    /**
+     * Crée ou met à jour le compte utilisateur lié à l'enseignant.
+     * Identifiant de connexion : nom complet ou e-mail.
+     * Mot de passe initial : le matricule (chiffré).
+     */
+    private function syncEnseignantUser(Enseignant $enseignant): void
     {
-        $query = Ec::with('ue');
+        $roleId = Role::where('nom', 'Enseignant')->value('id');
 
-        if ($user = auth()->user()) {
-            self::applyDecanatScope($query, 'ecs', $user);
+        if ($roleId === null) {
+            return;
         }
 
-        return $query->orderBy('code')->get();
+        $user = $enseignant->user_id ? User::find($enseignant->user_id) : null;
+        $user ??= User::where('email', $enseignant->email)->first();
+
+        if ($user === null) {
+            $user = new User;
+            $user->email = $enseignant->email;
+        }
+
+        $user->role_id = $roleId;
+        $user->name = trim(($enseignant->nom ?? '').' '.($enseignant->prenom ?? ''));
+        $user->password = Hash::make($enseignant->matricule);
+        $user->confirme = true;
+        $user->save();
+
+        if ($enseignant->user_id !== $user->id) {
+            $enseignant->user_id = $user->id;
+            $enseignant->save();
+        }
     }
 
     private function payload(array $data, array $config, ?Model $item = null): array

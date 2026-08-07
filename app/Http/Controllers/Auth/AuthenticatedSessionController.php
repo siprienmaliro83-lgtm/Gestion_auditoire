@@ -25,18 +25,20 @@ class AuthenticatedSessionController extends Controller
         $password = $request->input('password');
 
         // L'identifiant peut être un e-mail (tous les rôles), un matricule
-        // ou un nom (étudiants). On résout d'abord l'utilisateur, puis on
-        // vérifie le mot de passe, quel que soit le mode de connexion.
-        // La colonne `matricule` n'existe que si la migration dédiée a été
-        // appliquée : on la garde donc conditionnelle pour ne pas planter sur
-        // une base dont le schéma n'est pas encore à jour.
-        $query = User::where('email', $identifier);
+        // ou un nom (étudiants/enseignants). On résout d'abord l'utilisateur
+        // par e-mail, puis par matricule, puis par nom, avant de vérifier le
+        // mot de passe. La colonne `matricule` n'existe que si la migration
+        // dédiée a été appliquée : on la garde donc conditionnelle pour ne
+        // pas planter sur une base dont le schéma n'est pas encore à jour.
+        $user = User::where('email', $identifier)->first();
 
-        if (Schema::hasColumn('users', 'matricule')) {
-            $query->orWhere('matricule', $identifier);
+        if (! $user && Schema::hasColumn('users', 'matricule')) {
+            $user = User::where('matricule', $identifier)->first();
         }
 
-        $user = $query->orWhere('name', $identifier)->first();
+        if (! $user) {
+            $user = User::where('name', $identifier)->first();
+        }
 
         if (! $user || ! Hash::check($password, $user->password)) {
             return back()
